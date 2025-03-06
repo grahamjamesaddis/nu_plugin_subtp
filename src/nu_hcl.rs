@@ -140,15 +140,15 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     let input_string = input.as_str()?;
 
     let parse_result: SerdeJsonValue = hcl::from_str(input_string).map_err(|e| LabeledError {
-        labels: vec![ErrorLabel {
+        labels: Box::new(vec![ErrorLabel {
             text: "Error parsing hcl".into(),
             span,
-        }],
+        }]),
         msg: e.to_string(),
         code: None,
         url: None,
         help: None,
-        inner: Vec::default(),
+        inner: Box::new(Vec::default()),
     })?;
 
     Ok(convert_sjson_to_value(&parse_result, span))
