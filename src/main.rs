@@ -1,7 +1,7 @@
-use nu_hcl::HclPlugin;
-use nu_plugin::{serve_plugin, MsgPackSerializer};
-mod nu_hcl;
+use nu_plugin::{MsgPackSerializer, serve_plugin};
+use nu_subtp::SubtpPlugin;
+mod nu_subtp;
 
 fn main() {
-    serve_plugin(&HclPlugin, MsgPackSerializer)
+    serve_plugin(&SubtpPlugin, MsgPackSerializer)
 }

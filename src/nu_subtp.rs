@@ -1,12 +1,12 @@
 use nu_plugin::{EngineInterface, EvaluatedCall, Plugin, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    record, Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value,
+    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 use serde_json::Value as SerdeJsonValue;
 
-pub struct HclPlugin;
+pub struct SubtpPlugin;
 
-impl Plugin for HclPlugin {
+impl Plugin for SubtpPlugin {
     fn version(&self) -> String {
         env!("CARGO_PKG_VERSION").to_string()
     }
@@ -19,10 +19,10 @@ impl Plugin for HclPlugin {
 struct FromHcl;
 
 impl SimplePluginCommand for FromHcl {
-    type Plugin = HclPlugin;
+    type Plugin = SubtpPlugin;
 
     fn name(&self) -> &str {
-        "from hcl"
+        "from vtt"
     }
 
     fn signature(&self) -> nu_protocol::Signature {
@@ -51,10 +51,10 @@ impl SimplePluginCommand for FromHcl {
 pub struct FromTf;
 
 impl SimplePluginCommand for FromTf {
-    type Plugin = HclPlugin;
+    type Plugin = SubtpPlugin;
 
     fn name(&self) -> &str {
-        "from tf"
+        "from srt"
     }
 
     fn signature(&self) -> nu_protocol::Signature {
