@@ -1,8 +1,10 @@
+use std::{i64, time::Duration};
+
 use nu_plugin::{EngineInterface, EvaluatedCall, Plugin, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
-use serde_json::Value as SerdeJsonValue;
+use subtp::vtt::{LineAlignment, VttBlock, VttComment, WebVtt};
 
 pub struct SubtpPlugin;
 
@@ -12,13 +14,13 @@ impl Plugin for SubtpPlugin {
     }
 
     fn commands(&self) -> Vec<Box<dyn nu_plugin::PluginCommand<Plugin = Self>>> {
-        vec![Box::new(FromHcl), Box::new(FromTf)]
+        vec![Box::new(FromVtt), Box::new(FromSrt)]
     }
 }
 
-struct FromHcl;
+struct FromVtt;
 
-impl SimplePluginCommand for FromHcl {
+impl SimplePluginCommand for FromVtt {
     type Plugin = SubtpPlugin;
 
     fn name(&self) -> &str {
@@ -30,11 +32,11 @@ impl SimplePluginCommand for FromHcl {
     }
 
     fn description(&self) -> &str {
-        "Parse text as .hcl and create a record"
+        "Parse text as .vtt and create records"
     }
 
     fn examples(&self) -> Vec<Example> {
-        examples("Convert .hcl data into record")
+        examples("Convert .vtt data into records")
     }
 
     fn run(
@@ -48,9 +50,9 @@ impl SimplePluginCommand for FromHcl {
     }
 }
 
-pub struct FromTf;
+pub struct FromSrt;
 
-impl SimplePluginCommand for FromTf {
+impl SimplePluginCommand for FromSrt {
     type Plugin = SubtpPlugin;
 
     fn name(&self) -> &str {
@@ -62,11 +64,11 @@ impl SimplePluginCommand for FromTf {
     }
 
     fn description(&self) -> &str {
-        "Parse text as .tf and create a record"
+        "Parse text as .srt and create records"
     }
 
     fn examples(&self) -> Vec<Example> {
-        examples("Convert .tf data into record")
+        examples("Convert .srt data into records")
     }
 
     fn run(
@@ -139,48 +141,163 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     let span = call.head;
     let input_string = input.as_str()?;
 
-    let parse_result: SerdeJsonValue = hcl::from_str(input_string).map_err(|e| LabeledError {
-        labels: Box::new(vec![ErrorLabel {
-            text: "Error parsing hcl".into(),
-            span,
-        }]),
-        msg: e.to_string(),
-        code: None,
-        url: None,
-        help: None,
-        inner: Box::new(Vec::default()),
-    })?;
+    let parse_result: WebVtt =
+        subtp::vtt::WebVtt::parse(input_string).map_err(|e| LabeledError {
+            labels: Box::new(vec![ErrorLabel {
+                text: "Error parsing hcl".into(),
+                span,
+            }]),
+            msg: e.to_string(),
+            code: None,
+            url: None,
+            help: None,
+            inner: Box::new(Vec::default()),
+        })?;
 
-    Ok(convert_sjson_to_value(&parse_result, span))
+    Ok(convert_webvtt_to_value(&parse_result, span))
 }
 
-pub fn convert_sjson_to_value(value: &SerdeJsonValue, span: Span) -> Value {
-    match value {
-        SerdeJsonValue::Array(array) => {
-            let v: Vec<Value> = array
-                .iter()
-                .map(|x| convert_sjson_to_value(x, span))
-                .collect();
+pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
+    let mut subtitles: Vec<Value> = vec![];
 
-            Value::list(v, span)
-        }
-        SerdeJsonValue::Bool(b) => Value::bool(*b, span),
-        SerdeJsonValue::Number(f) => {
-            if f.is_f64() {
-                Value::float(f.as_f64().unwrap(), span)
-            } else {
-                Value::int(f.as_i64().unwrap(), span)
+    for item in &value.blocks {
+        let mut rec = record!();
+        match item {
+            VttBlock::Comment(val) => match val {
+                VttComment::Side(side) => {
+                    rec.push("Comment", Value::string(side, span));
+                }
+                VttComment::Below(below) => {
+                    rec.push("Comment", Value::string(below, span));
+                }
+            },
+            VttBlock::Que(val) => {
+                match &val.settings {
+                    Some(setting) => {
+                        match setting.line {
+                            Some(line) => match line {
+                                subtp::vtt::Line::LineNumber(number, alignment) => {
+                                    rec.push(
+                                        "Line number",
+                                        Value::int(number.clone() as i64, span),
+                                    );
+                                    match alignment {
+                                        Some(line_alighment) => match line_alighment {
+                                            LineAlignment::Start => rec.push(
+                                                "Line alignment",
+                                                Value::string("Start".to_string(), span),
+                                            ),
+                                            LineAlignment::Center => rec.push(
+                                                "Line alignment",
+                                                Value::string("Center".to_string(), span),
+                                            ),
+                                            LineAlignment::End => rec.push(
+                                                "Line alignment",
+                                                Value::string("End".to_string(), span),
+                                            ),
+                                        },
+                                        None => {}
+                                    }
+                                }
+                                subtp::vtt::Line::Percentage(percentage, alignment) => {
+                                    rec.push(
+                                        "Line percentage",
+                                        Value::int(percentage.value.clone() as i64, span),
+                                    );
+                                    match alignment {
+                                        Some(line_alighment) => match line_alighment {
+                                            LineAlignment::Start => rec.push(
+                                                "Line alignment",
+                                                Value::string("Start".to_string(), span),
+                                            ),
+                                            LineAlignment::Center => rec.push(
+                                                "Line alignment",
+                                                Value::string("Center".to_string(), span),
+                                            ),
+                                            LineAlignment::End => rec.push(
+                                                "Line alignment",
+                                                Value::string("End".to_string(), span),
+                                            ),
+                                        },
+                                        None => {}
+                                    }
+                                }
+                            },
+                            None => {}
+                        }
+                        // todo!("implement settings");
+                    }
+                    None => {}
+                }
+                match &val.identifier {
+                    Some(v) => rec.push("Identifier", Value::string(v.clone(), span)),
+                    None => {}
+                }
+                let start: Duration = val.timings.start.into();
+                let a: i64 = start.as_secs() as i64 * 1_000_000_000;
+                rec.push("Start time", Value::duration(a, span));
+
+                let end: Duration = val.timings.end.into();
+                let b: i64 = end.as_secs() as i64 * 1_000_000_000;
+                rec.push("End time", Value::duration(b, span));
+
+                let payload: Vec<Value> =
+                    val.payload.iter().map(|v| Value::string(v, span)).collect();
+
+                rec.push("Payload", Value::list(payload, span));
+            }
+            VttBlock::Style(val) => {
+                rec.push("Style", nu_protocol::Value::string(val.style.clone(), span))
+            }
+            VttBlock::Region(val) => {
+                match &val.id {
+                    Some(v) => rec.push("Id", Value::string(v.clone(), span)),
+                    None => {}
+                }
+                match val.width {
+                    Some(v) => rec.push("Width", Value::float(v.value.into(), span)),
+                    None => {}
+                }
+                match val.lines {
+                    Some(v) => rec.push("Lines", Value::int(v.into(), span)),
+                    None => {}
+                }
+                match val.region_anchor {
+                    Some(v) => {
+                        rec.push("Region_Anchor x", Value::float(v.x.value.into(), span));
+                        rec.push("Region_Anchor y", Value::float(v.y.value.into(), span));
+                    }
+                    None => {}
+                }
+                match val.viewport_anchor {
+                    Some(v) => {
+                        rec.push("Viewport_Anchor x", Value::float(v.x.value.into(), span));
+                        rec.push("Viewport_Anchor y", Value::float(v.y.value.into(), span));
+                    }
+                    None => {}
+                }
             }
         }
-        SerdeJsonValue::Null => Value::nothing(span),
-        SerdeJsonValue::Object(k) => {
-            let mut rec = record!();
-            for item in k {
-                rec.push(item.0.clone(), convert_sjson_to_value(item.1, span));
-            }
-
-            Value::record(rec, span)
-        }
-        SerdeJsonValue::String(s) => Value::string(s.clone(), span),
+        let val = Value::record(rec, span);
+        subtitles.push(val);
     }
+
+    // // Value::record(rec, span)
+    // let v1 = Value::bool(true, span);
+    // let v2 = Value::bool(false, span);
+    // // let values: Vec<(String, Value)> = vec![("rec1".to_string(), v1)];
+    // let mut r = record!();
+    // let mut r_outer = record!();
+
+    // r.push("col1", v1);
+    // r.push("col2", v2);
+    // let r_inner = Value::record(r, span);
+
+    // // r_outer.push("vtt", r_inner);
+
+    // subtitles.push(r_inner);
+
+    let l = Value::list(subtitles, span);
+    // Value::record(r_outer, span);
+    l
 }
