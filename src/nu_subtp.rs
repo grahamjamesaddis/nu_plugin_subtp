@@ -157,20 +157,26 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     Ok(convert_webvtt_to_value(&parse_result, span))
 }
 
+fn convert_vtt_comment_to_value(vtt_comment: &VttComment, span: Span) -> (String, Value) {
+    (
+        "Comment".to_string(),
+        match vtt_comment {
+            VttComment::Side(side) => Value::string(side, span),
+            VttComment::Below(below) => Value::string(below, span),
+        },
+    )
+}
+
 pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
     let mut subtitles: Vec<Value> = vec![];
 
-    for item in &value.blocks {
+    for vtt_block in &value.blocks {
         let mut rec = record!();
-        match item {
-            VttBlock::Comment(val) => match val {
-                VttComment::Side(side) => {
-                    rec.push("Comment", Value::string(side, span));
-                }
-                VttComment::Below(below) => {
-                    rec.push("Comment", Value::string(below, span));
-                }
-            },
+        match vtt_block {
+            VttBlock::Comment(vtt_comment) => {
+                let (col, val) = convert_vtt_comment_to_value(&vtt_comment, span);
+                rec.push(col, val)
+            }
             VttBlock::Que(val) => {
                 match &val.settings {
                     Some(setting) => {
