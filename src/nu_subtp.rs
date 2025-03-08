@@ -2,10 +2,11 @@ use std::{i64, time::Duration};
 
 use nu_plugin::{EngineInterface, EvaluatedCall, Plugin, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
+    Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Value, record,
 };
 use subtp::vtt::{
-    Alignment, Line, LineAlignment, Vertical, VttBlock, VttComment, VttCue, VttTimestamp, WebVtt,
+    Alignment, Anchor, Line, LineAlignment, Vertical, VttBlock, VttComment, VttCue, VttTimestamp,
+    VttTimings, WebVtt,
 };
 
 pub struct SubtpPlugin;
@@ -224,6 +225,29 @@ fn convert_vtt_timestanp_to_duration(timestamp: VttTimestamp, span: Span) -> Val
     let seconds: i64 = start.as_secs() as i64 * 1_000_000_000;
     Value::duration(seconds, span)
 }
+
+fn convert_vtt_timings_to_value(timings: VttTimings, span: Span) -> Value {
+    let mut timing_record = record!();
+
+    timing_record.push(
+        "Start Time",
+        convert_vtt_timestanp_to_duration(timings.start, span),
+    );
+    timing_record.push(
+        "End Time",
+        convert_vtt_timestanp_to_duration(timings.end, span),
+    );
+
+    Value::record(timing_record, span)
+}
+fn convert_vtt_anchor_to_value(anchor: Anchor, span: Span) -> Value {
+    let mut anchor_record = record!();
+
+    anchor_record.push("x".to_string(), Value::float(anchor.x.value.into(), span));
+    anchor_record.push("y".to_string(), Value::float(anchor.y.value.into(), span));
+    Value::record(anchor_record, span)
+}
+
 pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
     let mut subtitles: Vec<Value> = vec![];
 
@@ -244,8 +268,7 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                         rec.push("Vertical", val);
                     }
                     if let Some(line) = setting.line {
-                        let columns = convert_vtt_line_to_values(&line, span);
-                        for (col, val) in columns {
+                        for (col, val) in convert_vtt_line_to_values(&line, span) {
                             rec.push(col, val);
                         }
                     }
@@ -254,15 +277,7 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                 if let Some(identifier) = &val.identifier {
                     rec.push("Identifier", Value::string(identifier.clone(), span))
                 }
-
-                rec.push(
-                    "Start time",
-                    convert_vtt_timestanp_to_duration(val.timings.start, span),
-                );
-                rec.push(
-                    "End time",
-                    convert_vtt_timestanp_to_duration(val.timings.end, span),
-                );
+                rec.push("Timings", convert_vtt_timings_to_value(val.timings, span));
 
                 let payload: Vec<Value> =
                     val.payload.iter().map(|v| Value::string(v, span)).collect();
@@ -273,31 +288,30 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                 rec.push("Style", nu_protocol::Value::string(val.style.clone(), span))
             }
             VttBlock::Region(val) => {
-                match &val.id {
-                    Some(v) => rec.push("Id", Value::string(v.clone(), span)),
-                    None => {}
+                if let Some(id) = &val.id {
+                    rec.push("Id", Value::string(id.clone(), span))
                 }
-                match val.width {
-                    Some(v) => rec.push("Width", Value::float(v.value.into(), span)),
-                    None => {}
+
+                if let Some(percentage) = val.width {
+                    rec.push("Width", Value::float(percentage.value.into(), span))
                 }
-                match val.lines {
-                    Some(v) => rec.push("Lines", Value::int(v.into(), span)),
-                    None => {}
+
+                if let Some(lines) = val.lines {
+                    rec.push("Lines", Value::int(lines.into(), span))
                 }
-                match val.region_anchor {
-                    Some(v) => {
-                        rec.push("Region_Anchor x", Value::float(v.x.value.into(), span));
-                        rec.push("Region_Anchor y", Value::float(v.y.value.into(), span));
-                    }
-                    None => {}
+
+                if let Some(region_anchor) = val.region_anchor {
+                    rec.push(
+                        "Region Anchor",
+                        convert_vtt_anchor_to_value(region_anchor, span),
+                    );
                 }
-                match val.viewport_anchor {
-                    Some(v) => {
-                        rec.push("Viewport_Anchor x", Value::float(v.x.value.into(), span));
-                        rec.push("Viewport_Anchor y", Value::float(v.y.value.into(), span));
-                    }
-                    None => {}
+
+                if let Some(viewport_anchor) = val.viewport_anchor {
+                    rec.push(
+                        "Viewport Anchor",
+                        convert_vtt_anchor_to_value(viewport_anchor, span),
+                    );
                 }
             }
         }
@@ -305,22 +319,6 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
         subtitles.push(val);
     }
 
-    // // Value::record(rec, span)
-    // let v1 = Value::bool(true, span);
-    // let v2 = Value::bool(false, span);
-    // // let values: Vec<(String, Value)> = vec![("rec1".to_string(), v1)];
-    // let mut r = record!();
-    // let mut r_outer = record!();
-
-    // r.push("col1", v1);
-    // r.push("col2", v2);
-    // let r_inner = Value::record(r, span);
-
-    // // r_outer.push("vtt", r_inner);
-
-    // subtitles.push(r_inner);
-
     let l = Value::list(subtitles, span);
-    // Value::record(r_outer, span);
     l
 }
