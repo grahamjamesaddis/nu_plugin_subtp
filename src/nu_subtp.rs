@@ -5,8 +5,8 @@ use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Value, record,
 };
 use subtp::vtt::{
-    Alignment, Anchor, Line, LineAlignment, Vertical, VttBlock, VttComment, VttCue, VttTimestamp,
-    VttTimings, WebVtt,
+    Alignment, Anchor, Line, LineAlignment, Position, PositionAlignment, Vertical, VttBlock,
+    VttComment, VttCue, VttTimestamp, VttTimings, WebVtt,
 };
 
 pub struct SubtpPlugin;
@@ -191,6 +191,32 @@ fn convert_vtt_line_alignment_to_column(
     )
 }
 
+fn convert_vtt_position_alignment_to_value(
+    position_alignment: &PositionAlignment,
+    span: Span,
+) -> Value {
+    match position_alignment {
+        PositionAlignment::LineLeft => Value::string("Line Left".to_string(), span),
+        PositionAlignment::Center => Value::string("Center".to_string(), span),
+        PositionAlignment::LineRight => Value::string("Line Right".to_string(), span),
+    }
+}
+
+fn convert_vtt_position_to_values(position: Position, span: Span) -> Vec<(String, Value)> {
+    let mut position_values: Vec<(String, Value)> = Vec::new();
+    position_values.push((
+        "Position perccntage".to_string(),
+        Value::float(position.value.value.into(), span),
+    ));
+    if let Some(alignment) = position.alignment {
+        position_values.push((
+            "Position Alignment".to_string(),
+            convert_vtt_position_alignment_to_value(&alignment, span),
+        ))
+    }
+
+    position_values
+}
 fn convert_vtt_line_to_values(line: &Line, span: Span) -> Vec<(String, Value)> {
     let mut line_values: Vec<(String, Value)> = Vec::new();
 
@@ -269,6 +295,11 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                     }
                     if let Some(line) = setting.line {
                         for (col, val) in convert_vtt_line_to_values(&line, span) {
+                            rec.push(col, val);
+                        }
+                    }
+                    if let Some(position) = setting.position {
+                        for (col, val) in convert_vtt_position_to_values(position, span) {
                             rec.push(col, val);
                         }
                     }
