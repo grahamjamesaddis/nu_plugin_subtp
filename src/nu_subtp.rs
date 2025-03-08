@@ -4,7 +4,9 @@ use nu_plugin::{EngineInterface, EvaluatedCall, Plugin, PluginCommand, SimplePlu
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
-use subtp::vtt::{LineAlignment, VttBlock, VttComment, WebVtt};
+use subtp::vtt::{
+    Alignment, Line, LineAlignment, Vertical, VttBlock, VttComment, VttCue, VttTimestamp, WebVtt,
+};
 
 pub struct SubtpPlugin;
 
@@ -144,7 +146,7 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     let parse_result: WebVtt =
         subtp::vtt::WebVtt::parse(input_string).map_err(|e| LabeledError {
             labels: Box::new(vec![ErrorLabel {
-                text: "Error parsing hcl".into(),
+                text: "Error parsuing hcl".into(),
                 span,
             }]),
             msg: e.to_string(),
@@ -166,7 +168,62 @@ fn convert_vtt_comment_to_value(vtt_comment: &VttComment, span: Span) -> (String
         },
     )
 }
+fn convert_vtt_cue_to_value(vtt_cue: &VttCue, span: Span) -> Vec<(String, Value)> {
+    let cue_values: Vec<(String, Value)> = Vec::new();
 
+    if let Some(settings) = &vtt_cue.settings {}
+
+    cue_values
+}
+
+fn convert_vtt_line_alignment_to_column(
+    line_alignment: &LineAlignment,
+    span: Span,
+) -> (String, Value) {
+    (
+        "Line alignment".to_string(),
+        match line_alignment {
+            LineAlignment::Start => Value::string("Start".to_string(), span),
+            LineAlignment::Center => Value::string("Center".to_string(), span),
+            LineAlignment::End => Value::string("End".to_string(), span),
+        },
+    )
+}
+
+fn convert_vtt_line_to_values(line: &Line, span: Span) -> Vec<(String, Value)> {
+    let mut line_values: Vec<(String, Value)> = Vec::new();
+
+    match line {
+        Line::LineNumber(val, alignment_option) => {
+            line_values.push((
+                "Line number".to_string(),
+                Value::int(val.clone() as i64, span),
+            ));
+            if let Some(alignment) = alignment_option {
+                let (col, val) = convert_vtt_line_alignment_to_column(&alignment, span);
+                line_values.push((col, val));
+            }
+        }
+        Line::Percentage(percentage, alignment_option) => {
+            line_values.push((
+                "Line percentage".to_string(),
+                Value::float(percentage.value.clone() as f64, span),
+            ));
+            if let Some(alignment) = alignment_option {
+                let (col, val) = convert_vtt_line_alignment_to_column(&alignment, span);
+                line_values.push((col, val));
+            }
+        }
+    }
+
+    line_values
+}
+
+fn convert_vtt_timestanp_to_duration(timestamp: VttTimestamp, span: Span) -> Value {
+    let start: Duration = timestamp.into();
+    let seconds: i64 = start.as_secs() as i64 * 1_000_000_000;
+    Value::duration(seconds, span)
+}
 pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
     let mut subtitles: Vec<Value> = vec![];
 
@@ -178,74 +235,34 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                 rec.push(col, val)
             }
             VttBlock::Que(val) => {
-                match &val.settings {
-                    Some(setting) => {
-                        match setting.line {
-                            Some(line) => match line {
-                                subtp::vtt::Line::LineNumber(number, alignment) => {
-                                    rec.push(
-                                        "Line number",
-                                        Value::int(number.clone() as i64, span),
-                                    );
-                                    match alignment {
-                                        Some(line_alighment) => match line_alighment {
-                                            LineAlignment::Start => rec.push(
-                                                "Line alignment",
-                                                Value::string("Start".to_string(), span),
-                                            ),
-                                            LineAlignment::Center => rec.push(
-                                                "Line alignment",
-                                                Value::string("Center".to_string(), span),
-                                            ),
-                                            LineAlignment::End => rec.push(
-                                                "Line alignment",
-                                                Value::string("End".to_string(), span),
-                                            ),
-                                        },
-                                        None => {}
-                                    }
-                                }
-                                subtp::vtt::Line::Percentage(percentage, alignment) => {
-                                    rec.push(
-                                        "Line percentage",
-                                        Value::int(percentage.value.clone() as i64, span),
-                                    );
-                                    match alignment {
-                                        Some(line_alighment) => match line_alighment {
-                                            LineAlignment::Start => rec.push(
-                                                "Line alignment",
-                                                Value::string("Start".to_string(), span),
-                                            ),
-                                            LineAlignment::Center => rec.push(
-                                                "Line alignment",
-                                                Value::string("Center".to_string(), span),
-                                            ),
-                                            LineAlignment::End => rec.push(
-                                                "Line alignment",
-                                                Value::string("End".to_string(), span),
-                                            ),
-                                        },
-                                        None => {}
-                                    }
-                                }
-                            },
-                            None => {}
-                        }
-                        // todo!("implement settings");
+                if let Some(setting) = &val.settings {
+                    if let Some(vertical) = &setting.vertical {
+                        let val = match vertical {
+                            Vertical::Lr => Value::string("Lr".to_string(), span),
+                            Vertical::Rl => Value::string("Rl".to_string(), span),
+                        };
+                        rec.push("Vertical", val);
                     }
-                    None => {}
+                    if let Some(line) = setting.line {
+                        let columns = convert_vtt_line_to_values(&line, span);
+                        for (col, val) in columns {
+                            rec.push(col, val);
+                        }
+                    }
+                    // todo!("implement settings");
                 }
-                match &val.identifier {
-                    Some(v) => rec.push("Identifier", Value::string(v.clone(), span)),
-                    None => {}
+                if let Some(identifier) = &val.identifier {
+                    rec.push("Identifier", Value::string(identifier.clone(), span))
                 }
-                let start: Duration = val.timings.start.into();
-                let a: i64 = start.as_secs() as i64 * 1_000_000_000;
-                rec.push("Start time", Value::duration(a, span));
 
-                let end: Duration = val.timings.end.into();
-                let b: i64 = end.as_secs() as i64 * 1_000_000_000;
-                rec.push("End time", Value::duration(b, span));
+                rec.push(
+                    "Start time",
+                    convert_vtt_timestanp_to_duration(val.timings.start, span),
+                );
+                rec.push(
+                    "End time",
+                    convert_vtt_timestanp_to_duration(val.timings.end, span),
+                );
 
                 let payload: Vec<Value> =
                     val.payload.iter().map(|v| Value::string(v, span)).collect();
