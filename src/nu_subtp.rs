@@ -1,5 +1,6 @@
 use std::{i64, time::Duration};
 
+use hcl::value;
 use nu_plugin::{EngineInterface, EvaluatedCall, Plugin, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Value, record,
@@ -50,6 +51,43 @@ impl SimplePluginCommand for FromVtt {
         input: &Value,
     ) -> Result<Value, LabeledError> {
         run(call, input)
+    }
+}
+
+struct NuValue {
+    value: Value,
+}
+
+impl NuValue {
+    fn from_web_vtt(item: &WebVtt, span: Span) -> Self {
+        NuValue {
+            value: convert_webvtt_to_value(item, span),
+        }
+    }
+
+    fn from_vtt_timestamp(timestamp: VttTimestamp, span: Span) -> Self {
+        let start: Duration = timestamp.into();
+        let seconds: i64 = start.as_secs() as i64 * 1_000_000_000;
+        NuValue {
+            value: Value::duration(seconds, span),
+        }
+    }
+    fn from_vtt_timings(timings: VttTimings, span: Span) -> Self {
+        let mut timing_record = record!();
+
+        timing_record.push(
+            "Start Time",
+            NuValue::from_vtt_timestamp(timings.start, span).value,
+            // convert_vtt_timestanp_to_duration(timings.start, span),
+        );
+        timing_record.push(
+            "End Time",
+            NuValue::from_vtt_timestamp(timings.end, span).value,
+            // convert_vtt_timestanp_to_duration(timings.end, span),
+        );
+        NuValue {
+            value: Value::record(timing_record, span),
+        }
     }
 }
 
@@ -157,7 +195,7 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
             inner: Box::new(Vec::default()),
         })?;
 
-    Ok(convert_webvtt_to_value(&parse_result, span))
+    Ok(NuValue::from_web_vtt(&parse_result, span).value)
 }
 
 fn convert_vtt_comment_to_value(vtt_comment: &VttComment, span: Span) -> (String, Value) {
@@ -246,26 +284,6 @@ fn convert_vtt_line_to_values(line: &Line, span: Span) -> Vec<(String, Value)> {
     line_values
 }
 
-fn convert_vtt_timestanp_to_duration(timestamp: VttTimestamp, span: Span) -> Value {
-    let start: Duration = timestamp.into();
-    let seconds: i64 = start.as_secs() as i64 * 1_000_000_000;
-    Value::duration(seconds, span)
-}
-
-fn convert_vtt_timings_to_value(timings: VttTimings, span: Span) -> Value {
-    let mut timing_record = record!();
-
-    timing_record.push(
-        "Start Time",
-        convert_vtt_timestanp_to_duration(timings.start, span),
-    );
-    timing_record.push(
-        "End Time",
-        convert_vtt_timestanp_to_duration(timings.end, span),
-    );
-
-    Value::record(timing_record, span)
-}
 fn convert_vtt_anchor_to_value(anchor: Anchor, span: Span) -> Value {
     let mut anchor_record = record!();
 
@@ -308,7 +326,10 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                 if let Some(identifier) = &val.identifier {
                     rec.push("Identifier", Value::string(identifier.clone(), span))
                 }
-                rec.push("Timings", convert_vtt_timings_to_value(val.timings, span));
+                rec.push(
+                    "Timings",
+                    NuValue::from_vtt_timings(val.timings, span).value,
+                );
 
                 let payload: Vec<Value> =
                     val.payload.iter().map(|v| Value::string(v, span)).collect();
