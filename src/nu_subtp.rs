@@ -89,6 +89,27 @@ impl NuValue {
             value: Value::record(timing_record, span),
         }
     }
+    fn from_vtt_comment(vtt_comment: &VttComment, span: Span) -> Value {
+        match vtt_comment {
+            VttComment::Side(side) => Value::string(side, span),
+            VttComment::Below(below) => Value::string(below, span),
+        }
+    }
+    fn from_vtt_anchor(anchor: Anchor, span: Span) -> Value {
+        let mut anchor_record = record!();
+
+        anchor_record.push("x".to_string(), Value::float(anchor.x.value.into(), span));
+        anchor_record.push("y".to_string(), Value::float(anchor.y.value.into(), span));
+        Value::record(anchor_record, span)
+    }
+}
+
+fn convert_vtt_anchor_to_value(anchor: Anchor, span: Span) -> Value {
+    let mut anchor_record = record!();
+
+    anchor_record.push("x".to_string(), Value::float(anchor.x.value.into(), span));
+    anchor_record.push("y".to_string(), Value::float(anchor.y.value.into(), span));
+    Value::record(anchor_record, span)
 }
 
 pub struct FromSrt;
@@ -198,15 +219,6 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     Ok(NuValue::from_web_vtt(&parse_result, span).value)
 }
 
-fn convert_vtt_comment_to_value(vtt_comment: &VttComment, span: Span) -> (String, Value) {
-    (
-        "Comment".to_string(),
-        match vtt_comment {
-            VttComment::Side(side) => Value::string(side, span),
-            VttComment::Below(below) => Value::string(below, span),
-        },
-    )
-}
 fn convert_vtt_cue_to_value(vtt_cue: &VttCue, span: Span) -> Vec<(String, Value)> {
     let cue_values: Vec<(String, Value)> = Vec::new();
 
@@ -284,14 +296,6 @@ fn convert_vtt_line_to_values(line: &Line, span: Span) -> Vec<(String, Value)> {
     line_values
 }
 
-fn convert_vtt_anchor_to_value(anchor: Anchor, span: Span) -> Value {
-    let mut anchor_record = record!();
-
-    anchor_record.push("x".to_string(), Value::float(anchor.x.value.into(), span));
-    anchor_record.push("y".to_string(), Value::float(anchor.y.value.into(), span));
-    Value::record(anchor_record, span)
-}
-
 pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
     let mut subtitles: Vec<Value> = vec![];
 
@@ -299,8 +303,8 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
         let mut rec = record!();
         match vtt_block {
             VttBlock::Comment(vtt_comment) => {
-                let (col, val) = convert_vtt_comment_to_value(&vtt_comment, span);
-                rec.push(col, val)
+                let val = NuValue::from_vtt_comment(&vtt_comment, span);
+                rec.push("Comment".to_string(), val)
             }
             VttBlock::Que(val) => {
                 if let Some(setting) = &val.settings {
@@ -355,14 +359,14 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                 if let Some(region_anchor) = val.region_anchor {
                     rec.push(
                         "Region Anchor",
-                        convert_vtt_anchor_to_value(region_anchor, span),
+                        NuValue::from_vtt_anchor(region_anchor, span),
                     );
                 }
 
                 if let Some(viewport_anchor) = val.viewport_anchor {
                     rec.push(
                         "Viewport Anchor",
-                        convert_vtt_anchor_to_value(viewport_anchor, span),
+                        NuValue::from_vtt_anchor(viewport_anchor, span),
                     );
                 }
             }
