@@ -58,39 +58,42 @@ struct NuValue {
 }
 
 impl NuValue {
-    fn from_web_vtt(item: &WebVtt, span: Span) -> Self {
+    fn from_web_vtt(web_vtt: &WebVtt, span: Span) -> Self {
         let mut vtt_rec = record!();
-        if let Some(description) = &item.header.description {
+        if let Some(description) = &web_vtt.header.description {
             vtt_rec.push(
                 "Description",
                 NuValue::from_vtt_description(&description, span).value,
             );
         }
-        vtt_rec.push("Blocks", NuValue::from_vtt_blocks(&item.blocks, span).value);
+        vtt_rec.push(
+            "Blocks",
+            NuValue::from_vtt_blocks(&web_vtt.blocks, span).value,
+        );
 
         NuValue {
             value: Value::record(vtt_rec, span),
         }
     }
 
-    fn from_vtt_timestamp(timestamp: VttTimestamp, span: Span) -> Self {
-        let start: Duration = timestamp.into();
+    fn from_vtt_timestamp(vtt_timestamp: VttTimestamp, span: Span) -> Self {
+        let start: Duration = vtt_timestamp.into();
         let seconds: i64 = start.as_secs() as i64 * 1_000_000_000;
         NuValue {
             value: Value::duration(seconds, span),
         }
     }
-    fn from_vtt_timings(timings: VttTimings, span: Span) -> Self {
+    fn from_vtt_timings(vtt_timings: VttTimings, span: Span) -> Self {
         let mut timing_record = record!();
 
         timing_record.push(
             "Start Time",
-            NuValue::from_vtt_timestamp(timings.start, span).value,
+            NuValue::from_vtt_timestamp(vtt_timings.start, span).value,
             // convert_vtt_timestanp_to_duration(timings.start, span),
         );
         timing_record.push(
             "End Time",
-            NuValue::from_vtt_timestamp(timings.end, span).value,
+            NuValue::from_vtt_timestamp(vtt_timings.end, span).value,
             // convert_vtt_timestanp_to_duration(timings.end, span),
         );
         NuValue {
@@ -143,10 +146,10 @@ impl NuValue {
             "Position perccntage".to_string(),
             Value::float(position.value.value.into(), span),
         );
-        if let Some(alignment) = position.alignment {
+        if let Some(position_alignment) = position.alignment {
             position_record.push(
                 "Position Alignment".to_string(),
-                NuValue::from_vtt_position_alignment(&alignment, span).value,
+                NuValue::from_vtt_position_alignment(&position_alignment, span).value,
             )
         }
 
@@ -154,13 +157,20 @@ impl NuValue {
             value: Value::record(position_record, span),
         }
     }
-    fn from_line_number(val: &i32, alignment_option: &Option<LineAlignment>, span: Span) -> Self {
+    fn from_line_number(
+        line_number_value: &i32,
+        line_alignment_option: &Option<LineAlignment>,
+        span: Span,
+    ) -> Self {
         let mut line_number = record!();
-        line_number.push("Number".to_string(), Value::int(val.clone() as i64, span));
-        if let Some(alignment) = alignment_option {
+        line_number.push(
+            "Number".to_string(),
+            Value::int(line_number_value.clone() as i64, span),
+        );
+        if let Some(line_alignment) = line_alignment_option {
             line_number.push(
                 "Alignment".to_string(),
-                NuValue::from_vtt_line_alignment(&alignment, span).value,
+                NuValue::from_vtt_line_alignment(&line_alignment, span).value,
             );
         }
         NuValue {
@@ -169,7 +179,7 @@ impl NuValue {
     }
     fn from_line_percentage(
         percentage: &Percentage,
-        alignment_option: &Option<LineAlignment>,
+        line_alignment_option: &Option<LineAlignment>,
         span: Span,
     ) -> Self {
         let mut line_number = record!();
@@ -177,10 +187,10 @@ impl NuValue {
             "Percentage".to_string(),
             Value::float(percentage.value.clone() as f64, span),
         );
-        if let Some(alignment) = alignment_option {
+        if let Some(line_alignment) = line_alignment_option {
             line_number.push(
                 "Alignment".to_string(),
-                NuValue::from_vtt_line_alignment(&alignment, span).value,
+                NuValue::from_vtt_line_alignment(&line_alignment, span).value,
             );
         }
         NuValue {
@@ -189,29 +199,29 @@ impl NuValue {
     }
     fn from_vtt_line(line: &Line, span: Span) -> Self {
         match line {
-            Line::LineNumber(val, alignment_option) => {
-                NuValue::from_line_number(val, alignment_option, span)
+            Line::LineNumber(val, line_alignment_option) => {
+                NuValue::from_line_number(val, line_alignment_option, span)
             }
-            Line::Percentage(percentage, alignment_option) => {
-                NuValue::from_line_percentage(percentage, alignment_option, span)
+            Line::Percentage(percentage, line_alignment_option) => {
+                NuValue::from_line_percentage(percentage, line_alignment_option, span)
             }
         }
     }
     fn from_vtt_cue(vtt_cue: &VttCue, span: Span) -> Self {
         let mut rec = record!();
-        if let Some(setting) = &vtt_cue.settings {
-            if let Some(vertical) = &setting.vertical {
+        if let Some(cue_setting) = &vtt_cue.settings {
+            if let Some(vertical) = &cue_setting.vertical {
                 let val = match vertical {
                     Vertical::Lr => Value::string("Lr".to_string(), span),
                     Vertical::Rl => Value::string("Rl".to_string(), span),
                 };
                 rec.push("Vertical", val);
             }
-            if let Some(line) = setting.line {
+            if let Some(line) = cue_setting.line {
                 let val = NuValue::from_vtt_line(&line, span);
                 rec.push("Line".to_string(), val.value);
             }
-            if let Some(position) = setting.position {
+            if let Some(position) = cue_setting.position {
                 let val = NuValue::from_vtt_position(position, span);
                 rec.push("Position".to_string(), val.value);
             }
@@ -278,18 +288,19 @@ impl NuValue {
         }
     }
 
-    fn from_vtt_blocks(vtt_block: &Vec<VttBlock>, span: Span) -> Self {
+    fn from_vtt_block(vtt_block: &VttBlock, span: Span) -> Self {
+        match vtt_block {
+            VttBlock::Comment(vtt_comment) => NuValue::from_vtt_comment(&vtt_comment, span),
+            VttBlock::Que(vtt_cue) => NuValue::from_vtt_cue(&vtt_cue, span),
+            VttBlock::Style(vtt_style) => NuValue::from_vtt_style(&vtt_style, span),
+            VttBlock::Region(vtt_region) => NuValue::from_vtt_region(&vtt_region, span),
+        }
+    }
+    fn from_vtt_blocks(vtt_blocks: &Vec<VttBlock>, span: Span) -> Self {
         let mut subtitles: Vec<Value> = vec![];
 
-        for element in vtt_block {
-            subtitles.push(match element {
-                VttBlock::Comment(vtt_comment) => {
-                    NuValue::from_vtt_comment(&vtt_comment, span).value
-                }
-                VttBlock::Que(vtt_cue) => NuValue::from_vtt_cue(&vtt_cue, span).value,
-                VttBlock::Style(vtt_style) => NuValue::from_vtt_style(&vtt_style, span).value,
-                VttBlock::Region(vtt_region) => NuValue::from_vtt_region(&vtt_region, span).value,
-            });
+        for vtt_block in vtt_blocks {
+            subtitles.push(NuValue::from_vtt_block(vtt_block, span).value);
         }
 
         NuValue {
@@ -408,7 +419,7 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     let parse_result: WebVtt =
         subtp::vtt::WebVtt::parse(input_string).map_err(|e| LabeledError {
             labels: Box::new(vec![ErrorLabel {
-                text: "Error parsuing hcl".into(),
+                text: "Error parsuing vtt".into(),
                 span,
             }]),
             msg: e.to_string(),
