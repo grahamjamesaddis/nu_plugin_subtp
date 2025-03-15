@@ -5,8 +5,8 @@ use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 use subtp::vtt::{
-    Anchor, Line, LineAlignment, Position, PositionAlignment, Vertical, VttBlock, VttComment,
-    VttCue, VttTimestamp, VttTimings, WebVtt,
+    Anchor, Line, LineAlignment, Percentage, Position, PositionAlignment, Vertical, VttBlock,
+    VttComment, VttCue, VttTimestamp, VttTimings, WebVtt,
 };
 
 pub struct SubtpPlugin;
@@ -123,22 +123,74 @@ impl NuValue {
             },
         }
     }
+    fn from_vtt_position(position: Position, span: Span) -> NuValue {
+        let mut position_record = record!();
+        position_record.push(
+            "Position perccntage".to_string(),
+            Value::float(position.value.value.into(), span),
+        );
+        if let Some(alignment) = position.alignment {
+            position_record.push(
+                "Position Alignment".to_string(),
+                NuValue::from_vtt_position_alignment(&alignment, span).value,
+            )
+        }
+
+        NuValue {
+            value: Value::record(position_record, span),
+        }
+    }
+    fn from_line_number(val: &i32, alignment_option: &Option<LineAlignment>, span: Span) -> Self {
+        let mut line_number = record!();
+        line_number.push("Number".to_string(), Value::int(val.clone() as i64, span));
+        if let Some(alignment) = alignment_option {
+            line_number.push(
+                "Alignment".to_string(),
+                NuValue::from_vtt_line_alignment(&alignment, span).value,
+            );
+        }
+        NuValue {
+            value: Value::record(line_number, span),
+        }
+    }
+    fn from_line_percentage(
+        percentage: &Percentage,
+        alignment_option: &Option<LineAlignment>,
+        span: Span,
+    ) -> Self {
+        let mut line_number = record!();
+        line_number.push(
+            "Percentage".to_string(),
+            Value::float(percentage.value.clone() as f64, span),
+        );
+        if let Some(alignment) = alignment_option {
+            line_number.push(
+                "Alignment".to_string(),
+                NuValue::from_vtt_line_alignment(&alignment, span).value,
+            );
+        }
+        NuValue {
+            value: Value::record(line_number, span),
+        }
+    }
+    fn from_vtt_line(line: &Line, span: Span) -> Self {
+        match line {
+            Line::LineNumber(val, alignment_option) => {
+                NuValue::from_line_number(val, alignment_option, span)
+            }
+            Line::Percentage(percentage, alignment_option) => {
+                NuValue::from_line_percentage(percentage, alignment_option, span)
+            }
+        }
+    }
 }
 
-fn convert_vtt_position_to_values(position: Position, span: Span) -> Vec<(String, Value)> {
-    let mut position_values: Vec<(String, Value)> = Vec::new();
-    position_values.push((
-        "Position perccntage".to_string(),
-        Value::float(position.value.value.into(), span),
-    ));
-    if let Some(alignment) = position.alignment {
-        position_values.push((
-            "Position Alignment".to_string(),
-            NuValue::from_vtt_position_alignment(&alignment, span).value,
-        ))
-    }
+fn convert_vtt_cue_to_value(vtt_cue: &VttCue, span: Span) -> Vec<(String, Value)> {
+    let cue_values: Vec<(String, Value)> = Vec::new();
 
-    position_values
+    if let Some(settings) = &vtt_cue.settings {}
+
+    cue_values
 }
 
 pub struct FromSrt;
@@ -248,45 +300,6 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     Ok(NuValue::from_web_vtt(&parse_result, span).value)
 }
 
-fn convert_vtt_cue_to_value(vtt_cue: &VttCue, span: Span) -> Vec<(String, Value)> {
-    let cue_values: Vec<(String, Value)> = Vec::new();
-
-    if let Some(settings) = &vtt_cue.settings {}
-
-    cue_values
-}
-
-fn convert_vtt_line_to_values(line: &Line, span: Span) -> Vec<(String, Value)> {
-    let mut line_values: Vec<(String, Value)> = Vec::new();
-
-    match line {
-        Line::LineNumber(val, alignment_option) => {
-            line_values.push((
-                "Line number".to_string(),
-                Value::int(val.clone() as i64, span),
-            ));
-            if let Some(alignment) = alignment_option {
-                let val = NuValue::from_vtt_line_alignment(&alignment, span);
-
-                line_values.push(("Line alignment".to_string(), val.value));
-            }
-        }
-        Line::Percentage(percentage, alignment_option) => {
-            line_values.push((
-                "Line percentage".to_string(),
-                Value::float(percentage.value.clone() as f64, span),
-            ));
-            if let Some(alignment) = alignment_option {
-                let val = NuValue::from_vtt_line_alignment(&alignment, span);
-
-                line_values.push(("Line alignment".to_string(), val.value));
-            }
-        }
-    }
-
-    line_values
-}
-
 pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
     let mut subtitles: Vec<Value> = vec![];
 
@@ -307,14 +320,12 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                         rec.push("Vertical", val);
                     }
                     if let Some(line) = setting.line {
-                        for (col, val) in convert_vtt_line_to_values(&line, span) {
-                            rec.push(col, val);
-                        }
+                        let val = NuValue::from_vtt_line(&line, span);
+                        rec.push("Line".to_string(), val.value);
                     }
                     if let Some(position) = setting.position {
-                        for (col, val) in convert_vtt_position_to_values(position, span) {
-                            rec.push(col, val);
-                        }
+                        let val = NuValue::from_vtt_position(position, span);
+                        rec.push("Position".to_string(), val.value);
                     }
                     // todo!("implement settings");
                 }
