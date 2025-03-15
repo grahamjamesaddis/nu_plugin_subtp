@@ -1,13 +1,12 @@
 use std::{i64, time::Duration};
 
-use hcl::value;
 use nu_plugin::{EngineInterface, EvaluatedCall, Plugin, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Value, record,
+    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 use subtp::vtt::{
-    Alignment, Anchor, Line, LineAlignment, Position, PositionAlignment, Vertical, VttBlock,
-    VttComment, VttCue, VttTimestamp, VttTimings, WebVtt,
+    Anchor, Line, LineAlignment, Position, PositionAlignment, Vertical, VttBlock, VttComment,
+    VttCue, VttTimestamp, VttTimings, WebVtt,
 };
 
 pub struct SubtpPlugin;
@@ -89,27 +88,57 @@ impl NuValue {
             value: Value::record(timing_record, span),
         }
     }
-    fn from_vtt_comment(vtt_comment: &VttComment, span: Span) -> Value {
-        match vtt_comment {
-            VttComment::Side(side) => Value::string(side, span),
-            VttComment::Below(below) => Value::string(below, span),
+    fn from_vtt_comment(vtt_comment: &VttComment, span: Span) -> Self {
+        NuValue {
+            value: match vtt_comment {
+                VttComment::Side(side) => Value::string(side, span),
+                VttComment::Below(below) => Value::string(below, span),
+            },
         }
     }
-    fn from_vtt_anchor(anchor: Anchor, span: Span) -> Value {
+    fn from_vtt_anchor(anchor: Anchor, span: Span) -> Self {
         let mut anchor_record = record!();
-
         anchor_record.push("x".to_string(), Value::float(anchor.x.value.into(), span));
         anchor_record.push("y".to_string(), Value::float(anchor.y.value.into(), span));
-        Value::record(anchor_record, span)
+
+        NuValue {
+            value: Value::record(anchor_record, span),
+        }
+    }
+    fn from_vtt_line_alignment(line_alignment: &LineAlignment, span: Span) -> Self {
+        NuValue {
+            value: match line_alignment {
+                LineAlignment::Start => Value::string("Start".to_string(), span),
+                LineAlignment::Center => Value::string("Center".to_string(), span),
+                LineAlignment::End => Value::string("End".to_string(), span),
+            },
+        }
+    }
+    fn from_vtt_position_alignment(position_alignment: &PositionAlignment, span: Span) -> Self {
+        NuValue {
+            value: match position_alignment {
+                PositionAlignment::LineLeft => Value::string("Line Left".to_string(), span),
+                PositionAlignment::Center => Value::string("Center".to_string(), span),
+                PositionAlignment::LineRight => Value::string("Line Right".to_string(), span),
+            },
+        }
     }
 }
 
-fn convert_vtt_anchor_to_value(anchor: Anchor, span: Span) -> Value {
-    let mut anchor_record = record!();
+fn convert_vtt_position_to_values(position: Position, span: Span) -> Vec<(String, Value)> {
+    let mut position_values: Vec<(String, Value)> = Vec::new();
+    position_values.push((
+        "Position perccntage".to_string(),
+        Value::float(position.value.value.into(), span),
+    ));
+    if let Some(alignment) = position.alignment {
+        position_values.push((
+            "Position Alignment".to_string(),
+            NuValue::from_vtt_position_alignment(&alignment, span).value,
+        ))
+    }
 
-    anchor_record.push("x".to_string(), Value::float(anchor.x.value.into(), span));
-    anchor_record.push("y".to_string(), Value::float(anchor.y.value.into(), span));
-    Value::record(anchor_record, span)
+    position_values
 }
 
 pub struct FromSrt;
@@ -227,46 +256,6 @@ fn convert_vtt_cue_to_value(vtt_cue: &VttCue, span: Span) -> Vec<(String, Value)
     cue_values
 }
 
-fn convert_vtt_line_alignment_to_column(
-    line_alignment: &LineAlignment,
-    span: Span,
-) -> (String, Value) {
-    (
-        "Line alignment".to_string(),
-        match line_alignment {
-            LineAlignment::Start => Value::string("Start".to_string(), span),
-            LineAlignment::Center => Value::string("Center".to_string(), span),
-            LineAlignment::End => Value::string("End".to_string(), span),
-        },
-    )
-}
-
-fn convert_vtt_position_alignment_to_value(
-    position_alignment: &PositionAlignment,
-    span: Span,
-) -> Value {
-    match position_alignment {
-        PositionAlignment::LineLeft => Value::string("Line Left".to_string(), span),
-        PositionAlignment::Center => Value::string("Center".to_string(), span),
-        PositionAlignment::LineRight => Value::string("Line Right".to_string(), span),
-    }
-}
-
-fn convert_vtt_position_to_values(position: Position, span: Span) -> Vec<(String, Value)> {
-    let mut position_values: Vec<(String, Value)> = Vec::new();
-    position_values.push((
-        "Position perccntage".to_string(),
-        Value::float(position.value.value.into(), span),
-    ));
-    if let Some(alignment) = position.alignment {
-        position_values.push((
-            "Position Alignment".to_string(),
-            convert_vtt_position_alignment_to_value(&alignment, span),
-        ))
-    }
-
-    position_values
-}
 fn convert_vtt_line_to_values(line: &Line, span: Span) -> Vec<(String, Value)> {
     let mut line_values: Vec<(String, Value)> = Vec::new();
 
@@ -277,8 +266,9 @@ fn convert_vtt_line_to_values(line: &Line, span: Span) -> Vec<(String, Value)> {
                 Value::int(val.clone() as i64, span),
             ));
             if let Some(alignment) = alignment_option {
-                let (col, val) = convert_vtt_line_alignment_to_column(&alignment, span);
-                line_values.push((col, val));
+                let val = NuValue::from_vtt_line_alignment(&alignment, span);
+
+                line_values.push(("Line alignment".to_string(), val.value));
             }
         }
         Line::Percentage(percentage, alignment_option) => {
@@ -287,8 +277,9 @@ fn convert_vtt_line_to_values(line: &Line, span: Span) -> Vec<(String, Value)> {
                 Value::float(percentage.value.clone() as f64, span),
             ));
             if let Some(alignment) = alignment_option {
-                let (col, val) = convert_vtt_line_alignment_to_column(&alignment, span);
-                line_values.push((col, val));
+                let val = NuValue::from_vtt_line_alignment(&alignment, span);
+
+                line_values.push(("Line alignment".to_string(), val.value));
             }
         }
     }
@@ -304,7 +295,7 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
         match vtt_block {
             VttBlock::Comment(vtt_comment) => {
                 let val = NuValue::from_vtt_comment(&vtt_comment, span);
-                rec.push("Comment".to_string(), val)
+                rec.push("Comment".to_string(), val.value)
             }
             VttBlock::Que(val) => {
                 if let Some(setting) = &val.settings {
@@ -359,14 +350,14 @@ pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
                 if let Some(region_anchor) = val.region_anchor {
                     rec.push(
                         "Region Anchor",
-                        NuValue::from_vtt_anchor(region_anchor, span),
+                        NuValue::from_vtt_anchor(region_anchor, span).value,
                     );
                 }
 
                 if let Some(viewport_anchor) = val.viewport_anchor {
                     rec.push(
                         "Viewport Anchor",
-                        NuValue::from_vtt_anchor(viewport_anchor, span),
+                        NuValue::from_vtt_anchor(viewport_anchor, span).value,
                     );
                 }
             }
