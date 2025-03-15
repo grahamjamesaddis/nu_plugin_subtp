@@ -6,8 +6,7 @@ use nu_protocol::{
 };
 use subtp::vtt::{
     Anchor, Line, LineAlignment, Percentage, Position, PositionAlignment, Vertical, VttBlock,
-    VttComment, VttCue, VttDescription, VttHeader, VttRegion, VttStyle, VttTimestamp, VttTimings,
-    WebVtt,
+    VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp, VttTimings, WebVtt,
 };
 
 pub struct SubtpPlugin;
@@ -60,8 +59,17 @@ struct NuValue {
 
 impl NuValue {
     fn from_web_vtt(item: &WebVtt, span: Span) -> Self {
+        let mut vtt_rec = record!();
+        if let Some(description) = &item.header.description {
+            vtt_rec.push(
+                "Description",
+                NuValue::from_vtt_description(&description, span).value,
+            );
+        }
+        vtt_rec.push("Blocks", NuValue::from_vtt_blocks(&item.blocks, span).value);
+
         NuValue {
-            value: convert_webvtt_to_value(item, span),
+            value: Value::record(vtt_rec, span),
         }
     }
 
@@ -269,6 +277,7 @@ impl NuValue {
             value: Value::record(rec, span),
         }
     }
+
     fn from_vtt_blocks(vtt_block: &Vec<VttBlock>, span: Span) -> Self {
         let mut subtitles: Vec<Value> = vec![];
 
@@ -410,20 +419,4 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
         })?;
 
     Ok(NuValue::from_web_vtt(&parse_result, span).value)
-}
-
-pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
-    let mut vtt_rec = record!();
-    if let Some(description) = &value.header.description {
-        vtt_rec.push(
-            "Description",
-            NuValue::from_vtt_description(&description, span).value,
-        );
-    }
-    vtt_rec.push(
-        "Blocks",
-        NuValue::from_vtt_blocks(&value.blocks, span).value,
-    );
-
-    Value::record(vtt_rec, span)
 }
