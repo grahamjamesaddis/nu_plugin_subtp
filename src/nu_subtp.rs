@@ -6,7 +6,8 @@ use nu_protocol::{
 };
 use subtp::vtt::{
     Anchor, Line, LineAlignment, Percentage, Position, PositionAlignment, Vertical, VttBlock,
-    VttComment, VttCue, VttTimestamp, VttTimings, WebVtt,
+    VttComment, VttCue, VttDescription, VttHeader, VttRegion, VttStyle, VttTimestamp, VttTimings,
+    WebVtt,
 };
 
 pub struct SubtpPlugin;
@@ -89,11 +90,16 @@ impl NuValue {
         }
     }
     fn from_vtt_comment(vtt_comment: &VttComment, span: Span) -> Self {
-        NuValue {
-            value: match vtt_comment {
+        let mut rec = record!();
+        rec.push(
+            "Comment".to_string(),
+            match vtt_comment {
                 VttComment::Side(side) => Value::string(side, span),
                 VttComment::Below(below) => Value::string(below, span),
             },
+        );
+        NuValue {
+            value: Value::record(rec, span),
         }
     }
     fn from_vtt_anchor(anchor: Anchor, span: Span) -> Self {
@@ -181,6 +187,112 @@ impl NuValue {
             Line::Percentage(percentage, alignment_option) => {
                 NuValue::from_line_percentage(percentage, alignment_option, span)
             }
+        }
+    }
+    fn from_vtt_cue(vtt_cue: &VttCue, span: Span) -> Self {
+        let mut rec = record!();
+        if let Some(setting) = &vtt_cue.settings {
+            if let Some(vertical) = &setting.vertical {
+                let val = match vertical {
+                    Vertical::Lr => Value::string("Lr".to_string(), span),
+                    Vertical::Rl => Value::string("Rl".to_string(), span),
+                };
+                rec.push("Vertical", val);
+            }
+            if let Some(line) = setting.line {
+                let val = NuValue::from_vtt_line(&line, span);
+                rec.push("Line".to_string(), val.value);
+            }
+            if let Some(position) = setting.position {
+                let val = NuValue::from_vtt_position(position, span);
+                rec.push("Position".to_string(), val.value);
+            }
+            // todo!("implement settings");
+        }
+        if let Some(identifier) = &vtt_cue.identifier {
+            rec.push("Identifier", Value::string(identifier.clone(), span))
+        }
+        rec.push(
+            "Timings",
+            NuValue::from_vtt_timings(vtt_cue.timings, span).value,
+        );
+
+        let payload: Vec<Value> = vtt_cue
+            .payload
+            .iter()
+            .map(|v| Value::string(v, span))
+            .collect();
+
+        rec.push("Payload", Value::list(payload, span));
+        NuValue {
+            value: Value::record(rec, span),
+        }
+    }
+    fn from_vtt_style(vtt_style: &VttStyle, span: Span) -> Self {
+        let mut rec = record!();
+        rec.push(
+            "Style",
+            nu_protocol::Value::string(vtt_style.style.clone(), span),
+        );
+        NuValue {
+            value: Value::record(rec, span),
+        }
+    }
+    fn from_vtt_region(vtt_region: &VttRegion, span: Span) -> Self {
+        let mut rec = record!();
+        if let Some(id) = &vtt_region.id {
+            rec.push("Id", Value::string(id.clone(), span))
+        }
+
+        if let Some(percentage) = vtt_region.width {
+            rec.push("Width", Value::float(percentage.value.into(), span))
+        }
+
+        if let Some(lines) = vtt_region.lines {
+            rec.push("Lines", Value::int(lines.into(), span))
+        }
+
+        if let Some(region_anchor) = vtt_region.region_anchor {
+            rec.push(
+                "Region Anchor",
+                NuValue::from_vtt_anchor(region_anchor, span).value,
+            );
+        }
+
+        if let Some(viewport_anchor) = vtt_region.viewport_anchor {
+            rec.push(
+                "Viewport Anchor",
+                NuValue::from_vtt_anchor(viewport_anchor, span).value,
+            );
+        }
+        NuValue {
+            value: Value::record(rec, span),
+        }
+    }
+    fn from_vtt_blocks(vtt_block: &Vec<VttBlock>, span: Span) -> Self {
+        let mut subtitles: Vec<Value> = vec![];
+
+        for element in vtt_block {
+            subtitles.push(match element {
+                VttBlock::Comment(vtt_comment) => {
+                    NuValue::from_vtt_comment(&vtt_comment, span).value
+                }
+                VttBlock::Que(vtt_cue) => NuValue::from_vtt_cue(&vtt_cue, span).value,
+                VttBlock::Style(vtt_style) => NuValue::from_vtt_style(&vtt_style, span).value,
+                VttBlock::Region(vtt_region) => NuValue::from_vtt_region(&vtt_region, span).value,
+            });
+        }
+
+        NuValue {
+            value: Value::list(subtitles, span),
+        }
+    }
+    fn from_vtt_description(description: &VttDescription, span: Span) -> Self {
+        NuValue {
+            value: match description {
+                VttDescription::Side(side) => Value::string(side, span),
+                VttDescription::Below(below) => Value::string(below, span),
+            },
         }
     }
 }
@@ -301,82 +413,17 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
 }
 
 pub fn convert_webvtt_to_value(value: &WebVtt, span: Span) -> Value {
-    let mut subtitles: Vec<Value> = vec![];
-
-    for vtt_block in &value.blocks {
-        let mut rec = record!();
-        match vtt_block {
-            VttBlock::Comment(vtt_comment) => {
-                let val = NuValue::from_vtt_comment(&vtt_comment, span);
-                rec.push("Comment".to_string(), val.value)
-            }
-            VttBlock::Que(val) => {
-                if let Some(setting) = &val.settings {
-                    if let Some(vertical) = &setting.vertical {
-                        let val = match vertical {
-                            Vertical::Lr => Value::string("Lr".to_string(), span),
-                            Vertical::Rl => Value::string("Rl".to_string(), span),
-                        };
-                        rec.push("Vertical", val);
-                    }
-                    if let Some(line) = setting.line {
-                        let val = NuValue::from_vtt_line(&line, span);
-                        rec.push("Line".to_string(), val.value);
-                    }
-                    if let Some(position) = setting.position {
-                        let val = NuValue::from_vtt_position(position, span);
-                        rec.push("Position".to_string(), val.value);
-                    }
-                    // todo!("implement settings");
-                }
-                if let Some(identifier) = &val.identifier {
-                    rec.push("Identifier", Value::string(identifier.clone(), span))
-                }
-                rec.push(
-                    "Timings",
-                    NuValue::from_vtt_timings(val.timings, span).value,
-                );
-
-                let payload: Vec<Value> =
-                    val.payload.iter().map(|v| Value::string(v, span)).collect();
-
-                rec.push("Payload", Value::list(payload, span));
-            }
-            VttBlock::Style(val) => {
-                rec.push("Style", nu_protocol::Value::string(val.style.clone(), span))
-            }
-            VttBlock::Region(val) => {
-                if let Some(id) = &val.id {
-                    rec.push("Id", Value::string(id.clone(), span))
-                }
-
-                if let Some(percentage) = val.width {
-                    rec.push("Width", Value::float(percentage.value.into(), span))
-                }
-
-                if let Some(lines) = val.lines {
-                    rec.push("Lines", Value::int(lines.into(), span))
-                }
-
-                if let Some(region_anchor) = val.region_anchor {
-                    rec.push(
-                        "Region Anchor",
-                        NuValue::from_vtt_anchor(region_anchor, span).value,
-                    );
-                }
-
-                if let Some(viewport_anchor) = val.viewport_anchor {
-                    rec.push(
-                        "Viewport Anchor",
-                        NuValue::from_vtt_anchor(viewport_anchor, span).value,
-                    );
-                }
-            }
-        }
-        let val = Value::record(rec, span);
-        subtitles.push(val);
+    let mut vtt_rec = record!();
+    if let Some(description) = &value.header.description {
+        vtt_rec.push(
+            "Description",
+            NuValue::from_vtt_description(&description, span).value,
+        );
     }
+    vtt_rec.push(
+        "Blocks",
+        NuValue::from_vtt_blocks(&value.blocks, span).value,
+    );
 
-    let l = Value::list(subtitles, span);
-    l
+    Value::record(vtt_rec, span)
 }
