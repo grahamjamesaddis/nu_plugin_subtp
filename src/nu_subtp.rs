@@ -5,8 +5,9 @@ use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 use subtp::vtt::{
-    Anchor, Line, LineAlignment, Percentage, Position, PositionAlignment, Vertical, VttBlock,
-    VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp, VttTimings, WebVtt,
+    Alignment, Anchor, Line, LineAlignment, Percentage, Position, PositionAlignment, Vertical,
+    VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp, VttTimings,
+    WebVtt,
 };
 
 pub struct SubtpPlugin;
@@ -85,10 +86,13 @@ impl NuValue {
     }
     fn from_vtt_timings(vtt_timings: VttTimings, span: Span) -> Self {
         NuValue {
-            value: Value::record(record! {
-                "Start".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.start, span).value,
-                "End".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.end, span).value,
-            }, span),
+            value: Value::record(
+                record! {
+                    "Start".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.start, span).value,
+                    "End".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.end, span).value,
+                },
+                span,
+            ),
         }
     }
     fn from_vtt_comment(vtt_comment: &VttComment, span: Span) -> Self {
@@ -100,16 +104,20 @@ impl NuValue {
                         VttComment::Side(side) => Value::string(side, span),
                         VttComment::Below(below) => Value::string(below, span),
                     }
-                }
-                , span),
+                },
+                span,
+            ),
         }
     }
     fn from_vtt_anchor(anchor: Anchor, span: Span) -> Self {
         NuValue {
-            value: Value::record(record! {
-                "x".to_string()=>Value::float(anchor.x.value.into(), span),
-                "y".to_string()=>Value::float(anchor.y.value.into(), span),
-            }, span),
+            value: Value::record(
+                record! {
+                    "x".to_string()=>Value::float(anchor.x.value.into(), span),
+                    "y".to_string()=>Value::float(anchor.y.value.into(), span),
+                },
+                span,
+            ),
         }
     }
     fn from_vtt_line_alignment(line_alignment: &LineAlignment, span: Span) -> Self {
@@ -201,20 +209,42 @@ impl NuValue {
         let mut rec = record!();
         if let Some(cue_setting) = &vtt_cue.settings {
             if let Some(vertical) = &cue_setting.vertical {
-                let val = match vertical {
-                    Vertical::Lr => Value::string("Lr".to_string(), span),
-                    Vertical::Rl => Value::string("Rl".to_string(), span),
-                };
-                rec.push("Vertical", val);
+                rec.push(
+                    "Vertical",
+                    match vertical {
+                        Vertical::Lr => Value::string("Lr".to_string(), span),
+                        Vertical::Rl => Value::string("Rl".to_string(), span),
+                    },
+                );
             }
             if let Some(line) = cue_setting.line {
-                let val = NuValue::from_vtt_line(&line, span);
-                rec.push("Line".to_string(), val.value);
+                rec.push(
+                    "Line".to_string(),
+                    NuValue::from_vtt_line(&line, span).value,
+                );
             }
             if let Some(position) = cue_setting.position {
-                let val = NuValue::from_vtt_position(position, span);
-                rec.push("Position".to_string(), val.value);
+                rec.push(
+                    "Position".to_string(),
+                    NuValue::from_vtt_position(position, span).value,
+                );
             }
+            if let Some(size) = cue_setting.size {
+                rec.push("Size".to_string(), Value::float(size.value as f64, span));
+            }
+            if let Some(align) = cue_setting.align {
+                rec.push(
+                    "Align".to_string(),
+                    match align {
+                        Alignment::Center => Value::string("Center", span),
+                        Alignment::Start => Value::string("Start", span),
+                        Alignment::End => Value::string("End", span),
+                        Alignment::Left => Value::string("Left", span),
+                        Alignment::Right => Value::string("Right", span),
+                    },
+                );
+            }
+
             // todo!("implement settings");
         }
         if let Some(identifier) = &vtt_cue.identifier {
@@ -357,13 +387,18 @@ fn examples(description: &str) -> Vec<Example> {
     let span = Span::test_data();
     let vec = vec![Example {
         description,
-        example: "'provider \"aws\" {
-  region = \"us-east-1\"
-}
-resource \"aws_instance\" \"web\" {
-  ami           = \"ami-a1b2c3d4\"
-  instance_type = \"t2.micro\"
-}' | from hcl",
+        example: "WEBVTT
+
+00:01.000 --> 00:04.000
+Never drink liquid nitrogen.
+
+00:05.000 --> 00:09.000
+— It will perforate your stomach.
+— You could die.
+
+00:10.000 --> 00:14.000
+The Organisation for Sample Public Service Announcements accepts no liability for the content of this advertisement, or for the consequences of any actions taken on the basis of the information provided.
+",
         result: Some(Value::record(
             record! {
                     "provider".to_string()=>Value::record(
