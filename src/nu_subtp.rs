@@ -5,7 +5,7 @@ use nu_protocol::{
 use subtp::vtt::WebVtt;
 
 mod vtt_values;
-use vtt_values::vtt_val::NuValue;
+use vtt_values::NuValue;
 pub struct SubtpPlugin;
 
 impl Plugin for SubtpPlugin {
