@@ -1,14 +1,8 @@
-use std::{i64, time::Duration};
-
 use nu_plugin::{EngineInterface, EvaluatedCall, Plugin, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
-use subtp::vtt::{
-    Alignment, Anchor, Line, LineAlignment, Percentage, Position, PositionAlignment, Vertical,
-    VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp, VttTimings,
-    WebVtt,
-};
+use subtp::vtt::WebVtt;
 
 mod vtt_values;
 use vtt_values::vtt_val::NuValue;

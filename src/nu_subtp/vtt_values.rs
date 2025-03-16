@@ -1,7 +1,5 @@
 pub mod vtt_val {
-    use nu_protocol::{
-        Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
-    };
+    use nu_protocol::{Span, Value, record};
     use std::{i64, time::Duration};
     use subtp::vtt::{
         Alignment, Anchor, Line, LineAlignment, Percentage, Position, PositionAlignment, Vertical,
