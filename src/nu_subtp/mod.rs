@@ -4,8 +4,8 @@ use nu_protocol::{
 };
 use subtp::vtt::WebVtt;
 
-mod vtt_values;
-use vtt_values::NuValue;
+mod vtt;
+use vtt::NuValue;
 pub struct SubtpPlugin;
 
 impl Plugin for SubtpPlugin {
