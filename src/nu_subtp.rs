@@ -84,42 +84,32 @@ impl NuValue {
         }
     }
     fn from_vtt_timings(vtt_timings: VttTimings, span: Span) -> Self {
-        let mut timing_record = record!();
-
-        timing_record.push(
-            "Start Time",
-            NuValue::from_vtt_timestamp(vtt_timings.start, span).value,
-            // convert_vtt_timestanp_to_duration(timings.start, span),
-        );
-        timing_record.push(
-            "End Time",
-            NuValue::from_vtt_timestamp(vtt_timings.end, span).value,
-            // convert_vtt_timestanp_to_duration(timings.end, span),
-        );
         NuValue {
-            value: Value::record(timing_record, span),
+            value: Value::record(record! {
+                "Start".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.start, span).value,
+                "End".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.end, span).value,
+            }, span),
         }
     }
     fn from_vtt_comment(vtt_comment: &VttComment, span: Span) -> Self {
-        let mut rec = record!();
-        rec.push(
-            "Comment".to_string(),
-            match vtt_comment {
-                VttComment::Side(side) => Value::string(side, span),
-                VttComment::Below(below) => Value::string(below, span),
-            },
-        );
         NuValue {
-            value: Value::record(rec, span),
+            value: Value::record(
+                record! {
+                    "Comment".to_string()=>
+                    match vtt_comment {
+                        VttComment::Side(side) => Value::string(side, span),
+                        VttComment::Below(below) => Value::string(below, span),
+                    }
+                }
+                , span),
         }
     }
     fn from_vtt_anchor(anchor: Anchor, span: Span) -> Self {
-        let mut anchor_record = record!();
-        anchor_record.push("x".to_string(), Value::float(anchor.x.value.into(), span));
-        anchor_record.push("y".to_string(), Value::float(anchor.y.value.into(), span));
-
         NuValue {
-            value: Value::record(anchor_record, span),
+            value: Value::record(record! {
+                "x".to_string()=>Value::float(anchor.x.value.into(), span),
+                "y".to_string()=>Value::float(anchor.y.value.into(), span),
+            }, span),
         }
     }
     fn from_vtt_line_alignment(line_alignment: &LineAlignment, span: Span) -> Self {
