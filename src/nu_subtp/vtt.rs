@@ -22,9 +22,13 @@ impl NuValue {
     }
 
     fn from_vtt_timestamp(vtt_timestamp: VttTimestamp, span: Span) -> Value {
-        let start: Duration = vtt_timestamp.into();
-        let seconds: i64 = start.as_secs() as i64 * 1_000_000_000;
-        Value::duration(seconds, span)
+        let duration = Duration::new(
+            ((vtt_timestamp.hours * 60 + vtt_timestamp.minutes) * 60 + vtt_timestamp.seconds)
+                as u64,
+            (vtt_timestamp.milliseconds as u32 * 1_000_000),
+        );
+        let nanoseconds: i64 = (duration.as_secs() * 1_000_000_000) as i64;
+        Value::duration(nanoseconds, span)
     }
     fn from_vtt_timings(vtt_timings: VttTimings, span: Span) -> Value {
         Value::record(
@@ -167,8 +171,6 @@ impl NuValue {
                     },
                 );
             }
-
-            // todo!("implement settings");
         }
         if let Some(identifier) = &vtt_cue.identifier {
             rec.push("Identifier", Value::string(identifier.clone(), span))
