@@ -159,5 +159,5 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
             inner: Box::new(Vec::default()),
         })?;
 
-    Ok(NuValue::from_web_vtt(&parse_result, span).value)
+    Ok(NuValue::from_web_vtt(&parse_result, span))
 }

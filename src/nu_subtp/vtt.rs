@@ -5,91 +5,72 @@ use subtp::vtt::{
     VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp, VttTimings,
     WebVtt,
 };
-pub struct NuValue {
-    pub value: Value,
-}
+pub struct NuValue;
 
 impl NuValue {
-    pub fn from_web_vtt(web_vtt: &WebVtt, span: Span) -> Self {
+    pub fn from_web_vtt(web_vtt: &WebVtt, span: Span) -> Value {
         let mut vtt_rec = record!();
         if let Some(description) = &web_vtt.header.description {
             vtt_rec.push(
                 "Description",
-                NuValue::from_vtt_description(&description, span).value,
+                NuValue::from_vtt_description(&description, span),
             );
         }
-        vtt_rec.push(
-            "Blocks",
-            NuValue::from_vtt_blocks(&web_vtt.blocks, span).value,
-        );
+        vtt_rec.push("Blocks", NuValue::from_vtt_blocks(&web_vtt.blocks, span));
 
-        NuValue {
-            value: Value::record(vtt_rec, span),
-        }
+        Value::record(vtt_rec, span)
     }
 
-    fn from_vtt_timestamp(vtt_timestamp: VttTimestamp, span: Span) -> Self {
+    fn from_vtt_timestamp(vtt_timestamp: VttTimestamp, span: Span) -> Value {
         let start: Duration = vtt_timestamp.into();
         let seconds: i64 = start.as_secs() as i64 * 1_000_000_000;
-        NuValue {
-            value: Value::duration(seconds, span),
-        }
+        Value::duration(seconds, span)
     }
-    fn from_vtt_timings(vtt_timings: VttTimings, span: Span) -> Self {
-        NuValue {
-            value: Value::record(
-                record! {
-                    "Start".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.start, span).value,
-                    "End".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.end, span).value,
-                },
-                span,
-            ),
-        }
-    }
-    fn from_vtt_comment(vtt_comment: &VttComment, span: Span) -> Self {
-        NuValue {
-            value: Value::record(
-                record! {
-                    "Comment".to_string()=>
-                    match vtt_comment {
-                        VttComment::Side(side) => Value::string(side, span),
-                        VttComment::Below(below) => Value::string(below, span),
-                    }
-                },
-                span,
-            ),
-        }
-    }
-    fn from_vtt_anchor(anchor: Anchor, span: Span) -> Self {
-        NuValue {
-            value: Value::record(
-                record! {
-                    "x".to_string()=>Value::float(anchor.x.value.into(), span),
-                    "y".to_string()=>Value::float(anchor.y.value.into(), span),
-                },
-                span,
-            ),
-        }
-    }
-    fn from_vtt_line_alignment(line_alignment: &LineAlignment, span: Span) -> Self {
-        NuValue {
-            value: match line_alignment {
-                LineAlignment::Start => Value::string("Start".to_string(), span),
-                LineAlignment::Center => Value::string("Center".to_string(), span),
-                LineAlignment::End => Value::string("End".to_string(), span),
+    fn from_vtt_timings(vtt_timings: VttTimings, span: Span) -> Value {
+        Value::record(
+            record! {
+                "Start".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.start, span),
+                "End".to_string()=>NuValue::from_vtt_timestamp(vtt_timings.end, span),
             },
-        }
+            span,
+        )
     }
-    fn from_vtt_position_alignment(position_alignment: &PositionAlignment, span: Span) -> Self {
-        NuValue {
-            value: match position_alignment {
-                PositionAlignment::LineLeft => Value::string("Line Left".to_string(), span),
-                PositionAlignment::Center => Value::string("Center".to_string(), span),
-                PositionAlignment::LineRight => Value::string("Line Right".to_string(), span),
+    fn from_vtt_comment(vtt_comment: &VttComment, span: Span) -> Value {
+        Value::record(
+            record! {
+                "Comment".to_string()=>
+                match vtt_comment {
+                    VttComment::Side(side) => Value::string(side, span),
+                    VttComment::Below(below) => Value::string(below, span),
+                }
             },
+            span,
+        )
+    }
+    fn from_vtt_anchor(anchor: Anchor, span: Span) -> Value {
+        Value::record(
+            record! {
+                "x".to_string()=>Value::float(anchor.x.value.into(), span),
+                "y".to_string()=>Value::float(anchor.y.value.into(), span),
+            },
+            span,
+        )
+    }
+    fn from_vtt_line_alignment(line_alignment: &LineAlignment, span: Span) -> Value {
+        match line_alignment {
+            LineAlignment::Start => Value::string("Start".to_string(), span),
+            LineAlignment::Center => Value::string("Center".to_string(), span),
+            LineAlignment::End => Value::string("End".to_string(), span),
         }
     }
-    fn from_vtt_position(position: Position, span: Span) -> NuValue {
+    fn from_vtt_position_alignment(position_alignment: &PositionAlignment, span: Span) -> Value {
+        match position_alignment {
+            PositionAlignment::LineLeft => Value::string("Line Left".to_string(), span),
+            PositionAlignment::Center => Value::string("Center".to_string(), span),
+            PositionAlignment::LineRight => Value::string("Line Right".to_string(), span),
+        }
+    }
+    fn from_vtt_position(position: Position, span: Span) -> Value {
         let mut position_record = record!();
         position_record.push(
             "Position perccntage".to_string(),
@@ -98,19 +79,17 @@ impl NuValue {
         if let Some(position_alignment) = position.alignment {
             position_record.push(
                 "Position Alignment".to_string(),
-                NuValue::from_vtt_position_alignment(&position_alignment, span).value,
+                NuValue::from_vtt_position_alignment(&position_alignment, span),
             )
         }
 
-        NuValue {
-            value: Value::record(position_record, span),
-        }
+        Value::record(position_record, span)
     }
     fn from_line_number(
         line_number_value: &i32,
         line_alignment_option: &Option<LineAlignment>,
         span: Span,
-    ) -> Self {
+    ) -> Value {
         let mut line_number = record!();
         line_number.push(
             "Number".to_string(),
@@ -119,18 +98,16 @@ impl NuValue {
         if let Some(line_alignment) = line_alignment_option {
             line_number.push(
                 "Alignment".to_string(),
-                NuValue::from_vtt_line_alignment(&line_alignment, span).value,
+                NuValue::from_vtt_line_alignment(&line_alignment, span),
             );
         }
-        NuValue {
-            value: Value::record(line_number, span),
-        }
+        Value::record(line_number, span)
     }
     fn from_line_percentage(
         percentage: &Percentage,
         line_alignment_option: &Option<LineAlignment>,
         span: Span,
-    ) -> Self {
+    ) -> Value {
         let mut line_number = record!();
         line_number.push(
             "Percentage".to_string(),
@@ -139,14 +116,12 @@ impl NuValue {
         if let Some(line_alignment) = line_alignment_option {
             line_number.push(
                 "Alignment".to_string(),
-                NuValue::from_vtt_line_alignment(&line_alignment, span).value,
+                NuValue::from_vtt_line_alignment(&line_alignment, span),
             );
         }
-        NuValue {
-            value: Value::record(line_number, span),
-        }
+        Value::record(line_number, span)
     }
-    fn from_vtt_line(line: &Line, span: Span) -> Self {
+    fn from_vtt_line(line: &Line, span: Span) -> Value {
         match line {
             Line::LineNumber(val, line_alignment_option) => {
                 NuValue::from_line_number(val, line_alignment_option, span)
@@ -156,7 +131,7 @@ impl NuValue {
             }
         }
     }
-    fn from_vtt_cue(vtt_cue: &VttCue, span: Span) -> Self {
+    fn from_vtt_cue(vtt_cue: &VttCue, span: Span) -> Value {
         let mut rec = record!();
         if let Some(cue_setting) = &vtt_cue.settings {
             if let Some(vertical) = &cue_setting.vertical {
@@ -169,15 +144,12 @@ impl NuValue {
                 );
             }
             if let Some(line) = cue_setting.line {
-                rec.push(
-                    "Line".to_string(),
-                    NuValue::from_vtt_line(&line, span).value,
-                );
+                rec.push("Line".to_string(), NuValue::from_vtt_line(&line, span));
             }
             if let Some(position) = cue_setting.position {
                 rec.push(
                     "Position".to_string(),
-                    NuValue::from_vtt_position(position, span).value,
+                    NuValue::from_vtt_position(position, span),
                 );
             }
             if let Some(size) = cue_setting.size {
@@ -201,10 +173,7 @@ impl NuValue {
         if let Some(identifier) = &vtt_cue.identifier {
             rec.push("Identifier", Value::string(identifier.clone(), span))
         }
-        rec.push(
-            "Timings",
-            NuValue::from_vtt_timings(vtt_cue.timings, span).value,
-        );
+        rec.push("Timings", NuValue::from_vtt_timings(vtt_cue.timings, span));
 
         let payload: Vec<Value> = vtt_cue
             .payload
@@ -213,21 +182,17 @@ impl NuValue {
             .collect();
 
         rec.push("Payload", Value::list(payload, span));
-        NuValue {
-            value: Value::record(rec, span),
-        }
+        Value::record(rec, span)
     }
-    fn from_vtt_style(vtt_style: &VttStyle, span: Span) -> Self {
+    fn from_vtt_style(vtt_style: &VttStyle, span: Span) -> Value {
         let mut rec = record!();
         rec.push(
             "Style",
             nu_protocol::Value::string(vtt_style.style.clone(), span),
         );
-        NuValue {
-            value: Value::record(rec, span),
-        }
+        Value::record(rec, span)
     }
-    fn from_vtt_region(vtt_region: &VttRegion, span: Span) -> Self {
+    fn from_vtt_region(vtt_region: &VttRegion, span: Span) -> Value {
         let mut rec = record!();
         if let Some(id) = &vtt_region.id {
             rec.push("Id", Value::string(id.clone(), span))
@@ -244,22 +209,21 @@ impl NuValue {
         if let Some(region_anchor) = vtt_region.region_anchor {
             rec.push(
                 "Region Anchor",
-                NuValue::from_vtt_anchor(region_anchor, span).value,
+                NuValue::from_vtt_anchor(region_anchor, span),
             );
         }
 
         if let Some(viewport_anchor) = vtt_region.viewport_anchor {
             rec.push(
                 "Viewport Anchor",
-                NuValue::from_vtt_anchor(viewport_anchor, span).value,
+                NuValue::from_vtt_anchor(viewport_anchor, span),
             );
         }
-        NuValue {
-            value: Value::record(rec, span),
-        }
+
+        Value::record(rec, span)
     }
 
-    fn from_vtt_block(vtt_block: &VttBlock, span: Span) -> Self {
+    fn from_vtt_block(vtt_block: &VttBlock, span: Span) -> Value {
         match vtt_block {
             VttBlock::Comment(vtt_comment) => NuValue::from_vtt_comment(&vtt_comment, span),
             VttBlock::Que(vtt_cue) => NuValue::from_vtt_cue(&vtt_cue, span),
@@ -267,23 +231,18 @@ impl NuValue {
             VttBlock::Region(vtt_region) => NuValue::from_vtt_region(&vtt_region, span),
         }
     }
-    fn from_vtt_blocks(vtt_blocks: &Vec<VttBlock>, span: Span) -> Self {
+    fn from_vtt_blocks(vtt_blocks: &Vec<VttBlock>, span: Span) -> Value {
         let mut subtitles: Vec<Value> = vec![];
 
         for vtt_block in vtt_blocks {
-            subtitles.push(NuValue::from_vtt_block(vtt_block, span).value);
+            subtitles.push(NuValue::from_vtt_block(vtt_block, span));
         }
-
-        NuValue {
-            value: Value::list(subtitles, span),
-        }
+        Value::list(subtitles, span)
     }
-    fn from_vtt_description(description: &VttDescription, span: Span) -> Self {
-        NuValue {
-            value: match description {
-                VttDescription::Side(side) => Value::string(side, span),
-                VttDescription::Below(below) => Value::string(below, span),
-            },
+    fn from_vtt_description(description: &VttDescription, span: Span) -> Value {
+        match description {
+            VttDescription::Side(side) => Value::string(side, span),
+            VttDescription::Below(below) => Value::string(below, span),
         }
     }
 }
