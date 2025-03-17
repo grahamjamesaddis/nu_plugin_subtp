@@ -1,9 +1,9 @@
 use nu_protocol::{Record, Span, Value, record};
 use std::{i64, time::Duration};
 use subtp::vtt::{
-    Alignment, Anchor, Line, LineAlignment, Percentage, Position, PositionAlignment, Vertical,
-    VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp, VttTimings,
-    WebVtt,
+    Alignment, Anchor, CueSettings, Line, LineAlignment, Percentage, Position, PositionAlignment,
+    Vertical, VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp,
+    VttTimings, WebVtt,
 };
 pub struct NuValue;
 
@@ -79,40 +79,49 @@ impl ToValue for VttComment {
         )
     }
 }
+
+impl ToValue for CueSettings {
+    fn to_value(&self, span: Span) -> Value {
+        let mut rec = record!();
+        if let Some(vertical) = &self.vertical {
+            rec.push(
+                "Vertical",
+                match vertical {
+                    Vertical::Lr => "Lr".to_string().to_value(span),
+                    Vertical::Rl => "Rl".to_string().to_value(span),
+                },
+            );
+        }
+        if let Some(line) = self.line {
+            rec.push("Line".to_string(), line.to_value(span));
+        }
+        if let Some(position) = self.position {
+            rec.push("Position".to_string(), position.to_value(span));
+        }
+        if let Some(size) = self.size {
+            rec.push("Size".to_string(), Value::float(size.value as f64, span));
+        }
+        if let Some(align) = self.align {
+            rec.push(
+                "Align".to_string(),
+                match align {
+                    Alignment::Center => "Center".to_string().to_value(span),
+                    Alignment::Start => "Start".to_string().to_value(span),
+                    Alignment::End => "End".to_string().to_value(span),
+                    Alignment::Left => "Left".to_string().to_value(span),
+                    Alignment::Right => "Right".to_string().to_value(span),
+                },
+            );
+        }
+
+        Value::record(rec, span)
+    }
+}
 impl ToValue for VttCue {
     fn to_value(&self, span: Span) -> Value {
         let mut rec = record!();
         if let Some(cue_setting) = &self.settings {
-            if let Some(vertical) = &cue_setting.vertical {
-                rec.push(
-                    "Vertical",
-                    match vertical {
-                        Vertical::Lr => "Lr".to_string().to_value(span),
-                        Vertical::Rl => "Rl".to_string().to_value(span),
-                    },
-                );
-            }
-            if let Some(line) = cue_setting.line {
-                rec.push("Line".to_string(), line.to_value(span));
-            }
-            if let Some(position) = cue_setting.position {
-                rec.push("Position".to_string(), position.to_value(span));
-            }
-            if let Some(size) = cue_setting.size {
-                rec.push("Size".to_string(), Value::float(size.value as f64, span));
-            }
-            if let Some(align) = cue_setting.align {
-                rec.push(
-                    "Align".to_string(),
-                    match align {
-                        Alignment::Center => "Center".to_string().to_value(span),
-                        Alignment::Start => "Start".to_string().to_value(span),
-                        Alignment::End => "End".to_string().to_value(span),
-                        Alignment::Left => "Left".to_string().to_value(span),
-                        Alignment::Right => "Right".to_string().to_value(span),
-                    },
-                );
-            }
+            rec.push("Settings", cue_setting.to_value(span));
         }
         if let Some(identifier) = &self.identifier {
             rec.push("Identifier", identifier.to_value(span))
