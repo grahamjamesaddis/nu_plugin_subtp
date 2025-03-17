@@ -5,7 +5,6 @@ use subtp::vtt::{
     Vertical, VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp,
     VttTimings, WebVtt,
 };
-pub struct NuValue;
 
 pub trait ToValue {
     fn to_value(&self, span: Span) -> Value;
@@ -46,12 +45,12 @@ impl ToValue for String {
 
 impl ToValue for Vec<VttBlock> {
     fn to_value(&self, span: Span) -> Value {
-        let mut subtitles: Vec<Value> = vec![];
-
-        for vtt_block in self {
-            subtitles.push(vtt_block.to_value(span));
-        }
-        Value::list(subtitles, span)
+        Value::list(
+            self.iter()
+                .map(|vtt_block| vtt_block.to_value(span))
+                .collect(),
+            span,
+        )
     }
 }
 
@@ -82,53 +81,60 @@ impl ToValue for VttComment {
 
 impl ToValue for CueSettings {
     fn to_value(&self, span: Span) -> Value {
-        let mut rec = record!();
+        let mut cue_settings = record!();
         if let Some(vertical) = &self.vertical {
-            rec.push(
-                "Vertical",
-                match vertical {
-                    Vertical::Lr => "Lr".to_string().to_value(span),
-                    Vertical::Rl => "Rl".to_string().to_value(span),
-                },
-            );
+            cue_settings.push("Vertical", vertical.to_value(span));
         }
         if let Some(line) = self.line {
-            rec.push("Line".to_string(), line.to_value(span));
+            cue_settings.push("Line".to_string(), line.to_value(span));
         }
         if let Some(position) = self.position {
-            rec.push("Position".to_string(), position.to_value(span));
+            cue_settings.push("Position".to_string(), position.to_value(span));
         }
         if let Some(size) = self.size {
-            rec.push("Size".to_string(), Value::float(size.value as f64, span));
+            cue_settings.push("Size".to_string(), Value::float(size.value as f64, span));
         }
-        if let Some(align) = self.align {
-            rec.push(
-                "Align".to_string(),
-                match align {
-                    Alignment::Center => "Center".to_string().to_value(span),
-                    Alignment::Start => "Start".to_string().to_value(span),
-                    Alignment::End => "End".to_string().to_value(span),
-                    Alignment::Left => "Left".to_string().to_value(span),
-                    Alignment::Right => "Right".to_string().to_value(span),
-                },
-            );
+        if let Some(alignment) = self.align {
+            cue_settings.push("Alignment".to_string(), alignment.to_value(span));
         }
 
-        Value::record(rec, span)
+        cue_settings.to_value(span)
     }
 }
+
+impl ToValue for Vertical {
+    fn to_value(&self, span: Span) -> Value {
+        match self {
+            Vertical::Lr => "Lr".to_string().to_value(span),
+            Vertical::Rl => "Rl".to_string().to_value(span),
+        }
+    }
+}
+
+impl ToValue for Alignment {
+    fn to_value(&self, span: Span) -> Value {
+        match self {
+            Alignment::Center => "Center".to_string().to_value(span),
+            Alignment::Start => "Start".to_string().to_value(span),
+            Alignment::End => "End".to_string().to_value(span),
+            Alignment::Left => "Left".to_string().to_value(span),
+            Alignment::Right => "Right".to_string().to_value(span),
+        }
+    }
+}
+
 impl ToValue for VttCue {
     fn to_value(&self, span: Span) -> Value {
-        let mut rec = record!();
-        if let Some(cue_setting) = &self.settings {
-            rec.push("Settings", cue_setting.to_value(span));
+        let mut vtt_cue = record!();
+        if let Some(cue_settings) = &self.settings {
+            vtt_cue.push("Cue settings", cue_settings.to_value(span));
         }
         if let Some(identifier) = &self.identifier {
-            rec.push("Identifier", identifier.to_value(span))
+            vtt_cue.push("Identifier", identifier.to_value(span))
         }
-        rec.push("Timings", self.timings.to_value(span));
+        vtt_cue.push("Timings", self.timings.to_value(span));
 
-        rec.push(
+        vtt_cue.push(
             "Payload",
             Value::list(
                 self.payload.iter().map(|v| v.to_value(span)).collect(),
@@ -136,7 +142,7 @@ impl ToValue for VttCue {
             ),
         );
 
-        Value::record(rec, span)
+        vtt_cue.to_value(span)
     }
 }
 
@@ -144,30 +150,40 @@ impl ToValue for Line {
     fn to_value(&self, span: Span) -> Value {
         match self {
             Line::LineNumber(val, line_alignment_option) => {
-                NuValue::from_line_number(val, line_alignment_option, span)
+                let mut line_number = record!();
+                line_number.push("Number".to_string(), val.to_value(span));
+                if let Some(line_alignment) = line_alignment_option {
+                    line_number.push("Alignment".to_string(), line_alignment.to_value(span));
+                }
+                line_number.to_value(span)
             }
             Line::Percentage(percentage, line_alignment_option) => {
-                NuValue::from_line_percentage(percentage, line_alignment_option, span)
+                let mut line_number = record!();
+                line_number.push("Percentage".to_string(), percentage.to_value(span));
+                if let Some(line_alignment) = line_alignment_option {
+                    line_number.push("Alignment".to_string(), line_alignment.to_value(span));
+                }
+                line_number.to_value(span)
             }
         }
+    }
+}
+
+impl ToValue for Percentage {
+    fn to_value(&self, span: Span) -> Value {
+        Value::float(self.value as f64, span)
     }
 }
 
 impl ToValue for Position {
     fn to_value(&self, span: Span) -> Value {
         let mut position_record = record!();
-        position_record.push(
-            "Position perccntage".to_string(),
-            Value::float(self.value.value.into(), span),
-        );
+        position_record.push("Percentage".to_string(), self.value.to_value(span));
         if let Some(position_alignment) = self.alignment {
-            position_record.push(
-                "Position Alignment".to_string(),
-                NuValue::from_vtt_position_alignment(&position_alignment, span),
-            )
+            position_record.push("Alignment".to_string(), position_alignment.to_value(span))
         }
 
-        Value::record(position_record, span)
+        position_record.to_value(span)
     }
 }
 impl ToValue for VttTimings {
@@ -239,56 +255,31 @@ impl ToValue for VttTimestamp {
     }
 }
 
-impl NuValue {
-    fn from_vtt_line_alignment(line_alignment: &LineAlignment, span: Span) -> Value {
-        match line_alignment {
+impl ToValue for LineAlignment {
+    fn to_value(&self, span: Span) -> Value {
+        match self {
             LineAlignment::Start => Value::string("Start".to_string(), span),
             LineAlignment::Center => Value::string("Center".to_string(), span),
             LineAlignment::End => Value::string("End".to_string(), span),
         }
     }
-    fn from_vtt_position_alignment(position_alignment: &PositionAlignment, span: Span) -> Value {
-        match position_alignment {
+}
+
+impl ToValue for PositionAlignment {
+    fn to_value(&self, span: Span) -> Value {
+        match self {
             PositionAlignment::LineLeft => Value::string("Line Left".to_string(), span),
             PositionAlignment::Center => Value::string("Center".to_string(), span),
             PositionAlignment::LineRight => Value::string("Line Right".to_string(), span),
         }
     }
+}
 
-    fn from_line_number(
-        line_number_value: &i32,
-        line_alignment_option: &Option<LineAlignment>,
-        span: Span,
-    ) -> Value {
-        let mut line_number = record!();
-        line_number.push(
-            "Number".to_string(),
-            Value::int(line_number_value.clone() as i64, span),
-        );
-        if let Some(line_alignment) = line_alignment_option {
-            line_number.push(
-                "Alignment".to_string(),
-                NuValue::from_vtt_line_alignment(&line_alignment, span),
-            );
+impl ToValue for i32 {
+    fn to_value(&self, span: Span) -> Value {
+        Value::Int {
+            val: (*self as i64),
+            internal_span: (span),
         }
-        Value::record(line_number, span)
-    }
-    fn from_line_percentage(
-        percentage: &Percentage,
-        line_alignment_option: &Option<LineAlignment>,
-        span: Span,
-    ) -> Value {
-        let mut line_number = record!();
-        line_number.push(
-            "Percentage".to_string(),
-            Value::float(percentage.value.clone() as f64, span),
-        );
-        if let Some(line_alignment) = line_alignment_option {
-            line_number.push(
-                "Alignment".to_string(),
-                NuValue::from_vtt_line_alignment(&line_alignment, span),
-            );
-        }
-        Value::record(line_number, span)
     }
 }
