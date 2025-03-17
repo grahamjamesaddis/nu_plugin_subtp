@@ -25,7 +25,7 @@ impl NuValue {
         let duration = Duration::new(
             ((vtt_timestamp.hours * 60 + vtt_timestamp.minutes) * 60 + vtt_timestamp.seconds)
                 as u64,
-            (vtt_timestamp.milliseconds as u32 * 1_000_000),
+            vtt_timestamp.milliseconds as u32 * 1_000_000,
         );
         let nanoseconds: i64 = (duration.as_secs() * 1_000_000_000) as i64;
         Value::duration(nanoseconds, span)
@@ -247,11 +247,4 @@ impl NuValue {
             VttDescription::Below(below) => Value::string(below, span),
         }
     }
-}
-fn convert_vtt_cue_to_value(vtt_cue: &VttCue, span: Span) -> Vec<(String, Value)> {
-    let cue_values: Vec<(String, Value)> = Vec::new();
-
-    if let Some(settings) = &vtt_cue.settings {}
-
-    cue_values
 }
