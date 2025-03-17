@@ -177,15 +177,15 @@ impl NuValue {
         }
         rec.push("Timings", NuValue::from_vtt_timings(vtt_cue.timings, span));
 
-        let payload: Vec<Value> = vtt_cue
+        rec.push("Payload", Value::list(vtt_cue
             .payload
             .iter()
             .map(|v| Value::string(v, span))
-            .collect();
-
-        rec.push("Payload", Value::list(payload, span));
+            .collect(), span));
+    
         Value::record(rec, span)
     }
+
     fn from_vtt_style(vtt_style: &VttStyle, span: Span) -> Value {
         let mut rec = record!();
         rec.push(
