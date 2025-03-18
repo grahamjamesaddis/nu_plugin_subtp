@@ -68,16 +68,14 @@ impl ToValue for VttBlock {
 }
 impl ToValue for VttComment {
     fn to_value(&self, span: Span) -> Value {
-        Value::record(
-            record! {
-                "Comment"=>
-                match self {
-                    VttComment::Side(side) => side.to_value(span),
-                    VttComment::Below(below) => below.to_value(span),
-                }
-            },
-            span,
-        )
+        record! {
+            "Comment"=>
+            match self {
+                VttComment::Side(side) => side.to_value(span),
+                VttComment::Below(below) => below.to_value(span),
+            }
+        }
+        .to_value(span)
     }
 }
 
