@@ -37,12 +37,9 @@ impl ToValue for VttDescription {
     }
 }
 
-impl ToValue for String {
-    fn to_value(&self, span: Span) -> Value {
-        Value::string(self, span)
-    }
-}
-impl ToValue for str {
+use duplicate::duplicate_item;
+#[duplicate_item(types; [String]; [str])]
+impl ToValue for types {
     fn to_value(&self, span: Span) -> Value {
         Value::string(self, span)
     }
@@ -278,15 +275,8 @@ impl ToValue for PositionAlignment {
     }
 }
 
-impl ToValue for i32 {
-    fn to_value(&self, span: Span) -> Value {
-        Value::Int {
-            val: (*self as i64),
-            internal_span: (span),
-        }
-    }
-}
-impl ToValue for u32 {
+#[duplicate_item(types; [i32]; [u32])]
+impl ToValue for types {
     fn to_value(&self, span: Span) -> Value {
         Value::Int {
             val: (*self as i64),
