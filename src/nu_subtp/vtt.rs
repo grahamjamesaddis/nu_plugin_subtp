@@ -43,6 +43,12 @@ impl ToValue for String {
     }
 }
 
+impl ToValue for str {
+    fn to_value(&self, span: Span) -> Value {
+        Value::string(self, span)
+    }
+}
+
 impl ToValue for Vec<VttBlock> {
     fn to_value(&self, span: Span) -> Value {
         Value::list(
@@ -86,16 +92,16 @@ impl ToValue for CueSettings {
             cue_settings.push("Vertical", vertical.to_value(span));
         }
         if let Some(line) = self.line {
-            cue_settings.push("Line".to_string(), line.to_value(span));
+            cue_settings.push("Line", line.to_value(span));
         }
         if let Some(position) = self.position {
-            cue_settings.push("Position".to_string(), position.to_value(span));
+            cue_settings.push("Position", position.to_value(span));
         }
         if let Some(size) = self.size {
-            cue_settings.push("Size".to_string(), Value::float(size.value as f64, span));
+            cue_settings.push("Size", size.to_value(span));
         }
         if let Some(alignment) = self.align {
-            cue_settings.push("Alignment".to_string(), alignment.to_value(span));
+            cue_settings.push("Alignment", alignment.to_value(span));
         }
 
         cue_settings.to_value(span)
@@ -207,40 +213,38 @@ impl ToValue for VttStyle {
 
 impl ToValue for VttRegion {
     fn to_value(&self, span: Span) -> Value {
-        let mut rec = record!();
+        let mut vtt_style = record!();
         if let Some(id) = &self.id {
-            rec.push("Id", Value::string(id.clone(), span))
+            vtt_style.push("Id", id.to_value(span))
         }
 
         if let Some(percentage) = self.width {
-            rec.push("Width", Value::float(percentage.value.into(), span))
+            vtt_style.push("Width", percentage.to_value(span))
         }
 
         if let Some(lines) = self.lines {
-            rec.push("Lines", Value::int(lines.into(), span))
+            vtt_style.push("Lines", lines.to_value(span))
         }
 
         if let Some(region_anchor) = self.region_anchor {
-            rec.push("Region Anchor", region_anchor.to_value(span));
+            vtt_style.push("Region Anchor", region_anchor.to_value(span));
         }
 
         if let Some(viewport_anchor) = self.viewport_anchor {
-            rec.push("Viewport Anchor", viewport_anchor.to_value(span));
+            vtt_style.push("Viewport Anchor", viewport_anchor.to_value(span));
         }
 
-        Value::record(rec, span)
+        vtt_style.to_value(span)
     }
 }
 
 impl ToValue for Anchor {
     fn to_value(&self, span: Span) -> Value {
-        Value::record(
-            record! {
-                "x".to_string()=>Value::float(self.x.value.into(), span),
-                "y".to_string()=>Value::float(self.y.value.into(), span),
-            },
-            span,
-        )
+        record! {
+            "x".to_string()=>self.x.to_value(span),
+            "y".to_string()=>self.y.to_value(span),
+        }
+        .to_value(span)
     }
 }
 
@@ -276,6 +280,14 @@ impl ToValue for PositionAlignment {
 }
 
 impl ToValue for i32 {
+    fn to_value(&self, span: Span) -> Value {
+        Value::Int {
+            val: (*self as i64),
+            internal_span: (span),
+        }
+    }
+}
+impl ToValue for u32 {
     fn to_value(&self, span: Span) -> Value {
         Value::Int {
             val: (*self as i64),
