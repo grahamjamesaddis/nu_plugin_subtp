@@ -42,7 +42,6 @@ impl ToValue for String {
         Value::string(self, span)
     }
 }
-
 impl ToValue for str {
     fn to_value(&self, span: Span) -> Value {
         Value::string(self, span)
@@ -74,7 +73,7 @@ impl ToValue for VttComment {
     fn to_value(&self, span: Span) -> Value {
         Value::record(
             record! {
-                "Comment".to_string()=>
+                "Comment"=>
                 match self {
                     VttComment::Side(side) => side.to_value(span),
                     VttComment::Below(below) => below.to_value(span),
@@ -111,8 +110,8 @@ impl ToValue for CueSettings {
 impl ToValue for Vertical {
     fn to_value(&self, span: Span) -> Value {
         match self {
-            Vertical::Lr => "Lr".to_string().to_value(span),
-            Vertical::Rl => "Rl".to_string().to_value(span),
+            Vertical::Lr => "Lr".to_value(span),
+            Vertical::Rl => "Rl".to_value(span),
         }
     }
 }
@@ -120,11 +119,11 @@ impl ToValue for Vertical {
 impl ToValue for Alignment {
     fn to_value(&self, span: Span) -> Value {
         match self {
-            Alignment::Center => "Center".to_string().to_value(span),
-            Alignment::Start => "Start".to_string().to_value(span),
-            Alignment::End => "End".to_string().to_value(span),
-            Alignment::Left => "Left".to_string().to_value(span),
-            Alignment::Right => "Right".to_string().to_value(span),
+            Alignment::Center => "Center".to_value(span),
+            Alignment::Start => "Start".to_value(span),
+            Alignment::End => "End".to_value(span),
+            Alignment::Left => "Left".to_value(span),
+            Alignment::Right => "Right".to_value(span),
         }
     }
 }
@@ -157,17 +156,17 @@ impl ToValue for Line {
         match self {
             Line::LineNumber(val, line_alignment_option) => {
                 let mut line_number = record!();
-                line_number.push("Number".to_string(), val.to_value(span));
+                line_number.push("Number", val.to_value(span));
                 if let Some(line_alignment) = line_alignment_option {
-                    line_number.push("Alignment".to_string(), line_alignment.to_value(span));
+                    line_number.push("Alignment", line_alignment.to_value(span));
                 }
                 line_number.to_value(span)
             }
             Line::Percentage(percentage, line_alignment_option) => {
                 let mut line_number = record!();
-                line_number.push("Percentage".to_string(), percentage.to_value(span));
+                line_number.push("Percentage", percentage.to_value(span));
                 if let Some(line_alignment) = line_alignment_option {
-                    line_number.push("Alignment".to_string(), line_alignment.to_value(span));
+                    line_number.push("Alignment", line_alignment.to_value(span));
                 }
                 line_number.to_value(span)
             }
@@ -184,9 +183,9 @@ impl ToValue for Percentage {
 impl ToValue for Position {
     fn to_value(&self, span: Span) -> Value {
         let mut position_record = record!();
-        position_record.push("Percentage".to_string(), self.value.to_value(span));
+        position_record.push("Percentage", self.value.to_value(span));
         if let Some(position_alignment) = self.alignment {
-            position_record.push("Alignment".to_string(), position_alignment.to_value(span))
+            position_record.push("Alignment", position_alignment.to_value(span))
         }
 
         position_record.to_value(span)
@@ -196,8 +195,8 @@ impl ToValue for VttTimings {
     fn to_value(&self, span: Span) -> Value {
         Value::record(
             record! {
-                "Start".to_string()=>self.start.to_value(span),
-                "End".to_string()=>self.end.to_value(span),
+                "Start"=>self.start.to_value(span),
+                "End"=>self.end.to_value(span),
             },
             span,
         )
@@ -206,7 +205,7 @@ impl ToValue for VttTimings {
 impl ToValue for VttStyle {
     fn to_value(&self, span: Span) -> Value {
         let mut rec = record!();
-        rec.push("Style", Value::string(self.style.clone(), span));
+        rec.push("Style", self.style.to_value(span));
         Value::record(rec, span)
     }
 }
@@ -241,8 +240,8 @@ impl ToValue for VttRegion {
 impl ToValue for Anchor {
     fn to_value(&self, span: Span) -> Value {
         record! {
-            "x".to_string()=>self.x.to_value(span),
-            "y".to_string()=>self.y.to_value(span),
+            "x"=>self.x.to_value(span),
+            "y"=>self.y.to_value(span),
         }
         .to_value(span)
     }
@@ -262,9 +261,9 @@ impl ToValue for VttTimestamp {
 impl ToValue for LineAlignment {
     fn to_value(&self, span: Span) -> Value {
         match self {
-            LineAlignment::Start => Value::string("Start".to_string(), span),
-            LineAlignment::Center => Value::string("Center".to_string(), span),
-            LineAlignment::End => Value::string("End".to_string(), span),
+            LineAlignment::Start => "Start".to_value(span),
+            LineAlignment::Center => "Center".to_value(span),
+            LineAlignment::End => "End".to_value(span),
         }
     }
 }
@@ -272,9 +271,9 @@ impl ToValue for LineAlignment {
 impl ToValue for PositionAlignment {
     fn to_value(&self, span: Span) -> Value {
         match self {
-            PositionAlignment::LineLeft => Value::string("Line Left".to_string(), span),
-            PositionAlignment::Center => Value::string("Center".to_string(), span),
-            PositionAlignment::LineRight => Value::string("Line Right".to_string(), span),
+            PositionAlignment::LineLeft => "Line Left".to_value(span),
+            PositionAlignment::Center => "Center".to_value(span),
+            PositionAlignment::LineRight => "Line Right".to_value(span),
         }
     }
 }
