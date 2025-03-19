@@ -282,3 +282,29 @@ impl ToValue for types {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn to_value_for_i64() {
+        assert_eq!(
+            5.to_value(Span { start: 5, end: 6 }),
+            Value::Int {
+                val: 5,
+                internal_span: Span { start: 5, end: 6 }
+            }
+        )
+    }
+    #[test]
+    fn to_value_for_i32() {
+        assert_eq!(
+            (5i32).to_value(Span { start: 5, end: 6 }),
+            Value::Int {
+                val: 5,
+                internal_span: Span { start: 5, end: 6 }
+            }
+        );
+    }
+}
