@@ -59,10 +59,17 @@ impl ToValue for Vec<VttBlock> {
 impl ToValue for VttBlock {
     fn to_value(&self, span: Span) -> Value {
         match self {
-            VttBlock::Comment(vtt_comment) => vtt_comment.to_value(span),
-            VttBlock::Que(vtt_cue) => vtt_cue.to_value(span),
-            VttBlock::Style(vtt_style) => vtt_style.to_value(span),
-            VttBlock::Region(vtt_region) => vtt_region.to_value(span),
+            VttBlock::Comment(vtt_comment) => {
+                record! {"Commmet"=> vtt_comment.to_value(span)}.to_value(span)
+            }
+            VttBlock::Que(vtt_cue) => record! {"Cue"=>vtt_cue.to_value(span)}.to_value(span),
+            VttBlock::Style(vtt_style) => {
+                record! {"Style"=>vtt_style.to_value(span)}.to_value(span)
+            }
+
+            VttBlock::Region(vtt_region) => {
+                record! {"Region"=>vtt_region.to_value(span)}.to_value(span)
+            }
         }
     }
 }
