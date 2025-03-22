@@ -1,4 +1,5 @@
-use nu_protocol::{Record, Span, Value, record};
+use nu_plugin::EvaluatedCall;
+use nu_protocol::{ErrorLabel, LabeledError, Span, Value, record};
 use std::{i64, time::Duration};
 use subtp::vtt::{
     Alignment, Anchor, CueSettings, Line, LineAlignment, Percentage, Position, PositionAlignment,
@@ -6,8 +7,26 @@ use subtp::vtt::{
     VttTimings, WebVtt,
 };
 
-pub trait ToValue {
-    fn to_value(&self, span: Span) -> Value;
+use crate::nu_subtp::ToValue;
+pub fn run_vtt(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
+    let span = call.head;
+    let input_string = input.as_str()?;
+
+    let parse_result: WebVtt =
+        subtp::vtt::WebVtt::parse(input_string).map_err(|e| LabeledError {
+            labels: Box::new(vec![ErrorLabel {
+                text: "Error parsing vtt".into(),
+                span,
+            }]),
+            msg: e.to_string(),
+            code: None,
+            url: None,
+            help: None,
+            inner: Box::new(Vec::default()),
+        })?;
+
+    // Ok(NuValue::from_web_vtt(&parse_result, span))
+    Ok(parse_result.to_value(span))
 }
 
 impl ToValue for WebVtt {
@@ -22,26 +41,12 @@ impl ToValue for WebVtt {
     }
 }
 
-impl ToValue for Record {
-    fn to_value(&self, span: Span) -> Value {
-        Value::record(self.clone(), span)
-    }
-}
-
 impl ToValue for VttDescription {
     fn to_value(&self, span: Span) -> Value {
         match self {
             VttDescription::Side(side) => side.to_value(span),
             VttDescription::Below(below) => below.to_value(span),
         }
-    }
-}
-
-use duplicate::duplicate_item;
-#[duplicate_item(types; [String]; [str])]
-impl ToValue for types {
-    fn to_value(&self, span: Span) -> Value {
-        Value::string(self, span)
     }
 }
 
@@ -277,41 +282,5 @@ impl ToValue for PositionAlignment {
             PositionAlignment::Center => "Center".to_value(span),
             PositionAlignment::LineRight => "Line Right".to_value(span),
         }
-    }
-}
-
-#[duplicate_item(types; [i32]; [u32])]
-impl ToValue for types {
-    fn to_value(&self, span: Span) -> Value {
-        Value::Int {
-            val: (*self as i64),
-            internal_span: (span),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn to_value_for_i64() {
-        assert_eq!(
-            5.to_value(Span { start: 5, end: 6 }),
-            Value::Int {
-                val: 5,
-                internal_span: Span { start: 5, end: 6 }
-            }
-        )
-    }
-    #[test]
-    fn to_value_for_i32() {
-        assert_eq!(
-            (5i32).to_value(Span { start: 5, end: 6 }),
-            Value::Int {
-                val: 5,
-                internal_span: Span { start: 5, end: 6 }
-            }
-        );
     }
 }

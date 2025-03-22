@@ -1,11 +1,11 @@
+use duplicate::duplicate_item;
 use nu_plugin::{EngineInterface, EvaluatedCall, Plugin, PluginCommand, SimplePluginCommand};
-use nu_protocol::{
-    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
-};
-use subtp::vtt::WebVtt;
+use nu_protocol::{Category, Example, LabeledError, Record, Signature, Span, Type, Value, record};
 
+mod srt;
 mod vtt;
-use vtt::ToValue;
+use srt::run_srt;
+use vtt::run_vtt;
 pub struct SubtpPlugin;
 
 impl Plugin for SubtpPlugin {
@@ -16,6 +16,9 @@ impl Plugin for SubtpPlugin {
     fn commands(&self) -> Vec<Box<dyn nu_plugin::PluginCommand<Plugin = Self>>> {
         vec![Box::new(FromVtt), Box::new(FromSrt)]
     }
+}
+pub trait ToValue {
+    fn to_value(&self, span: Span) -> Value;
 }
 
 struct FromVtt;
@@ -46,7 +49,7 @@ impl SimplePluginCommand for FromVtt {
         call: &EvaluatedCall,
         input: &Value,
     ) -> Result<Value, LabeledError> {
-        run(call, input)
+        run_vtt(call, input)
     }
 }
 
@@ -78,7 +81,7 @@ impl SimplePluginCommand for FromSrt {
         call: &EvaluatedCall,
         input: &Value,
     ) -> Result<Value, LabeledError> {
-        run(call, input)
+        run_srt(call, input)
     }
 }
 
@@ -141,24 +144,66 @@ The Organisation for Sample Public Service Announcements accepts no liability fo
     }];
     vec
 }
+impl ToValue for Record {
+    fn to_value(&self, span: Span) -> Value {
+        Value::record(self.clone(), span)
+    }
+}
 
-fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
-    let span = call.head;
-    let input_string = input.as_str()?;
+#[duplicate_item(types; [String]; [str])]
+impl ToValue for types {
+    fn to_value(&self, span: Span) -> Value {
+        Value::string(self, span)
+    }
+}
 
-    let parse_result: WebVtt =
-        subtp::vtt::WebVtt::parse(input_string).map_err(|e| LabeledError {
-            labels: Box::new(vec![ErrorLabel {
-                text: "Error parsuing vtt".into(),
-                span,
-            }]),
-            msg: e.to_string(),
-            code: None,
-            url: None,
-            help: None,
-            inner: Box::new(Vec::default()),
-        })?;
+#[duplicate_item(types; [i32]; [u32])]
+impl ToValue for types {
+    fn to_value(&self, span: Span) -> Value {
+        Value::Int {
+            val: (*self as i64),
+            internal_span: (span),
+        }
+    }
+}
 
-    // Ok(NuValue::from_web_vtt(&parse_result, span))
-    Ok(parse_result.to_value(span))
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn to_value_for_i64() {
+        assert_eq!(
+            5.to_value(Span { start: 5, end: 6 }),
+            Value::Int {
+                val: 5,
+                internal_span: Span { start: 5, end: 6 }
+            }
+        )
+    }
+    #[test]
+    fn to_value_for_i32() {
+        assert_eq!(
+            (5i32).to_value(Span { start: 5, end: 6 }),
+            Value::Int {
+                val: 5,
+                internal_span: Span { start: 5, end: 6 }
+            }
+        );
+    }
+}
+impl ToValue for Vec<String> {
+    fn to_value(&self, span: Span) -> Value {
+        let a: Vec<Value> = self.iter().map(|text| text.to_value(span)).collect();
+        a.to_value(span)
+    }
+}
+
+impl ToValue for Vec<Value> {
+    fn to_value(&self, span: Span) -> Value {
+        Value::List {
+            vals: self.to_vec(),
+            internal_span: span,
+        }
+    }
 }
