@@ -4,7 +4,7 @@ use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 
-use super::nu_subtp::SubtpPlugin;
+use super::SubtpPlugin;
 
 use std::{i64, time::Duration};
 use subtp::vtt::{

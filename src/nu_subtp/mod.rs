@@ -5,27 +5,25 @@ use nu_protocol::{Record, Span, Value};
 mod srt;
 mod vtt;
 
-mod nu_subtp {
-    use crate::nu_subtp::srt::FromSrt;
-    use crate::nu_subtp::vtt::FromVtt;
-    use nu_plugin::Plugin;
-    use nu_protocol::{Span, Value};
-    pub struct SubtpPlugin;
+use crate::nu_subtp::srt::FromSrt;
+use crate::nu_subtp::vtt::FromVtt;
+use nu_plugin::Plugin;
 
-    impl Plugin for SubtpPlugin {
-        fn version(&self) -> String {
-            env!("CARGO_PKG_VERSION").to_string()
-        }
+pub struct SubtpPlugin;
 
-        fn commands(&self) -> Vec<Box<dyn nu_plugin::PluginCommand<Plugin = Self>>> {
-            vec![Box::new(FromVtt), Box::new(FromSrt)]
-        }
+impl Plugin for SubtpPlugin {
+    fn version(&self) -> String {
+        env!("CARGO_PKG_VERSION").to_string()
     }
-    pub trait ToValue {
-        fn to_value(&self, span: Span) -> Value;
+
+    fn commands(&self) -> Vec<Box<dyn nu_plugin::PluginCommand<Plugin = Self>>> {
+        vec![Box::new(FromVtt), Box::new(FromSrt)]
     }
 }
-use nu_subtp::ToValue;
+pub trait ToValue {
+    fn to_value(&self, span: Span) -> Value;
+}
+
 impl ToValue for Record {
     fn to_value(&self, span: Span) -> Value {
         Value::record(self.clone(), span)

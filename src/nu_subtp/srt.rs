@@ -8,7 +8,7 @@ use subtp::srt::{SrtSubtitle, SrtTimestamp};
 
 use super::ToValue;
 
-use super::nu_subtp::SubtpPlugin;
+use super::SubtpPlugin;
 pub struct FromSrt;
 
 impl SimplePluginCommand for FromSrt {
