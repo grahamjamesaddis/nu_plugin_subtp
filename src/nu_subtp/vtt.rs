@@ -1,17 +1,17 @@
+use super::ToValue;
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 
-use crate::nu_subtp::SubtpPlugin;
+use super::nu_subtp::SubtpPlugin;
+
 use std::{i64, time::Duration};
 use subtp::vtt::{
     Alignment, Anchor, CueSettings, Line, LineAlignment, Percentage, Position, PositionAlignment,
     Vertical, VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp,
     VttTimings, WebVtt,
 };
-
-use crate::nu_subtp::ToValue;
 
 pub struct FromVtt;
 

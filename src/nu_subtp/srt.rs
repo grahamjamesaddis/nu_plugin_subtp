@@ -6,8 +6,9 @@ use nu_protocol::{Span, record};
 use subtp::srt::{LinePosition, SubRip};
 use subtp::srt::{SrtSubtitle, SrtTimestamp};
 
-use super::{SubtpPlugin, ToValue};
+use super::ToValue;
 
+use super::nu_subtp::SubtpPlugin;
 pub struct FromSrt;
 
 impl SimplePluginCommand for FromSrt {
