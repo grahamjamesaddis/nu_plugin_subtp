@@ -2,24 +2,6 @@ use duplicate::duplicate_item;
 
 use nu_protocol::{Record, Span, Value};
 
-mod srt;
-mod vtt;
-
-use crate::nu_subtp::srt::FromSrt;
-use crate::nu_subtp::vtt::FromVtt;
-use nu_plugin::Plugin;
-
-pub struct SubtpPlugin;
-
-impl Plugin for SubtpPlugin {
-    fn version(&self) -> String {
-        env!("CARGO_PKG_VERSION").to_string()
-    }
-
-    fn commands(&self) -> Vec<Box<dyn nu_plugin::PluginCommand<Plugin = Self>>> {
-        vec![Box::new(FromVtt), Box::new(FromSrt)]
-    }
-}
 pub trait ToValue {
     fn to_value(&self, span: Span) -> Value;
 }
@@ -72,6 +54,7 @@ mod tests {
         );
     }
 }
+
 impl ToValue for Vec<String> {
     fn to_value(&self, span: Span) -> Value {
         let a: Vec<Value> = self.iter().map(|text| text.to_value(span)).collect();

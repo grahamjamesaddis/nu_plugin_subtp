@@ -1,18 +1,18 @@
-use super::ToValue;
+use std::{i64, time::Duration};
+
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 
 use super::SubtpPlugin;
+use super::common::ToValue;
 
-use std::{i64, time::Duration};
 use subtp::vtt::{
     Alignment, Anchor, CueSettings, Line, LineAlignment, Percentage, Position, PositionAlignment,
     Vertical, VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp,
     VttTimings, WebVtt,
 };
-
 pub struct FromVtt;
 
 impl SimplePluginCommand for FromVtt {

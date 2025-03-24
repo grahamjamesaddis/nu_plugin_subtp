@@ -1,14 +1,14 @@
 use std::time::Duration;
 
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
-use nu_protocol::{Category, ErrorLabel, Example, LabeledError, Signature, Type, Value};
-use nu_protocol::{Span, record};
-use subtp::srt::{LinePosition, SubRip};
-use subtp::srt::{SrtSubtitle, SrtTimestamp};
-
-use super::ToValue;
+use nu_protocol::{
+    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
+};
 
 use super::SubtpPlugin;
+use super::common::ToValue;
+
+use subtp::srt::{LinePosition, SrtSubtitle, SrtTimestamp, SubRip};
 pub struct FromSrt;
 
 impl SimplePluginCommand for FromSrt {
