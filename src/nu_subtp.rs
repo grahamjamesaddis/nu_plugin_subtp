@@ -1,9 +1,9 @@
 mod common;
-mod srt;
-mod vtt;
+mod from_srt;
+mod from_vtt;
 
-use crate::nu_subtp::srt::FromSrt;
-use crate::nu_subtp::vtt::FromVtt;
+use crate::nu_subtp::from_srt::FromSrt;
+use crate::nu_subtp::from_vtt::FromVtt;
 use nu_plugin::Plugin;
 
 pub struct SubtpPlugin;

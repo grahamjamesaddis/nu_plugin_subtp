@@ -51,50 +51,35 @@ fn examples(description: &str) -> Vec<Example> {
     let span = Span::test_data();
     let vec = vec![Example {
         description,
-        example: "WEBVTT
+        example: "1 00:01:17,757 --> 00:01:18,757 Copy boy!
 
-00:01.000 --> 00:04.000
-Never drink liquid nitrogen.
+2 00:01:20,727 --> 00:01:23,662
+Make it snappy.
+Where's the rest of this story?
 
-00:05.000 --> 00:09.000
-— It will perforate your stomach.
-— You could die.
+3 00:01:23,862 --> 00:01:25,091 Morning Post.
 
-00:10.000 --> 00:14.000
-The Organisation for Sample Public Service Announcements accepts no liability for the content of this advertisement, or for the consequences of any actions taken on the basis of the information provided.
+4 00:01:25,298 --> 00:01:27,960 City desk? Just a moment and I'll connect you.
+
+5 00:01:28,268 --> 00:01:30,998 If anybody asks for me, I'm down at the courthouse.
 ",
-        result: Some(Value::record(
-            record! {
-                    "provider".to_string()=>Value::record(
-                        record!{
-                            "aws".to_string() => Value::record
-                            (    record!{
-                                "region".to_string()=>Value::test_string("us-east-1")
-                            },span
-                            )
-                        }
-                    ,span
-                    ),
-
-                    "resource".to_string()=> Value::record(
-                        record!{"aws_instance".to_string()=>
-                        Value::record (
-                            record!{
-                                "web".to_string()=>
-                                Value::record(
-                                    record! {
-                                        "ami".to_string()=>Value::test_string("ami-a1b2c3d4"),
-                                        "instance_type".to_string()=>Value::test_string("t2.micro"),
-                                    },
-                                    span,
-                                )
-                            },
-                            span
-                        )}
-                        ,
-                         span,
-            )
-                },
+        result: Some(Value::list(
+            vec![
+                Value::record(
+                    record! {
+                        "Sequence"=>Value::int(1, span),
+                        "Start"=>Value::duration(((1*60+17)*1000+757)*1_000_000, span),
+                    },
+                    span,
+                ),
+                Value::record(
+                    record! {
+                        "Sequence"=>Value::int(2, span),
+                        "Start"=>Value::duration(((1*60+17)*1000+757)*1000_000, span),
+                    },
+                    span,
+                ),
+            ],
             span,
         )),
     }];
@@ -136,12 +121,12 @@ impl ToValue for SubRip {
 
 impl ToValue for SrtSubtitle {
     fn to_value(&self, span: nu_protocol::Span) -> Value {
-        let mut subtitle = record!();
-
-        subtitle.push("Sequence", self.sequence.to_value(span));
-        subtitle.push("Stqrt", self.start.to_value(span));
-        subtitle.push("End", self.end.to_value(span));
-        subtitle.push("Text", self.text.to_value(span));
+        let mut subtitle = record! {
+            "Sequence"=> self.sequence.to_value(span),
+            "Start"=> self.start.to_value(span),
+            "End"=> self.end.to_value(span),
+            "Text"=> self.text.to_value(span),
+        };
         if let Some(line_position) = self.line_position {
             subtitle.push("Line Position", line_position.to_value(span));
         }
