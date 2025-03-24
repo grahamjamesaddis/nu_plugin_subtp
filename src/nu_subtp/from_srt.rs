@@ -69,6 +69,11 @@ Where's the rest of this story?
                     record! {
                         "Sequence"=>Value::int(1, span),
                         "Start"=>Value::duration(((1*60+17)*1000+757)*1_000_000, span),
+                        "End"=>Value::duration(((1*60+18)*1000+757)*1_000_000, span),
+                        "Text"=>Value::List { vals: vec![
+                            Value::String { val:"Make it snappy.".to_string(), internal_span: span },
+                            Value::String { val:"Where's the rest of this story?".to_string(), internal_span: span },
+                            ], internal_span: span }
                     },
                     span,
                 ),
@@ -76,6 +81,10 @@ Where's the rest of this story?
                     record! {
                         "Sequence"=>Value::int(2, span),
                         "Start"=>Value::duration(((1*60+17)*1000+757)*1000_000, span),
+                        "End"=>Value::duration(((1*60+18)*1000+757)*1_000_000, span),
+                        "Text"=>Value::List { vals: vec![
+                            Value::String { val:"Copy boy!".to_string(), internal_span: Span { start: 1, end: 2 } }
+                            ], internal_span: span }
                     },
                     span,
                 ),
