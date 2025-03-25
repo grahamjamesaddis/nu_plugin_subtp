@@ -1,10 +1,10 @@
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    record, Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value,
+    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 
-use super::common::ToValue;
 use super::SubtpPlugin;
+use super::common::ToValue;
 
 use subtp::vtt::{
     Alignment, Anchor, CueSettings, Line, LineAlignment, Percentage, Position, PositionAlignment,
@@ -47,12 +47,7 @@ fn signature(name: &str) -> nu_protocol::Signature {
         .input_output_type(Type::String, Type::Record(Box::new([])))
         .category(Category::Formats)
 }
-fn examples(description: &str) -> Vec<Example> {
-    let span = Span::test_data();
-    let vec = vec![Example {
-        description,
-        example:
-"WEBVTT
+const EX_TXT: &str = "WEBVTT
 
 00:01.000 --> 00:04.000
 Never drink liquid nitrogen.
@@ -63,47 +58,56 @@ Never drink liquid nitrogen.
 
 00:10.000 --> 00:14.000
 The Organisation for Sample Public Service Announcements accepts no liability for the content of this advertisement, or for the consequences of any actions taken on the basis of the information provided.
-",
-        result: Some(Value::record(record! {
+";
+
+fn examples(description: &str) -> Vec<Example> {
+    let span = Span::test_data();
+    let vec = vec![Example {
+        description,
+        example: EX_TXT,
+        result: Some(Value::record(
+            record! {
             "Blocks".to_string()=>Value::list(vec![
                 Value::record(record!{
                     "Cue".to_string() => Value::record(record!{
                         "Timings".to_string()=>Value::record(record!{
-                            "Start".to_string()=>Value::duration(((0*60+1)*1000+000)*1_000_000, span),
-                            "End".to_string()=>Value::duration(((0*60+4)*1000+000)*1_000_000, span),
-                        }, span),
-                    "Payload".to_string()=>Value::list(vec![
-                        Value::string("Never drink liquid nitrogen.", span),
-                        ], span),
-                }, span),
-            }, span),
-            Value::record(record!{
-                "Cue".to_string() => Value::record(record!{
-                    "Timings".to_string()=>Value::record(record!{
-                        "Start".to_string()=>Value::duration(((0*60+5)*1000+000)*1_000_000, span),
-                        "End".to_string()=>Value::duration(((0*60+9)*1000+000)*1_000_000, span),
+                                "Start".to_string()=>Value::duration(((0*60+1)*1000+000)*1_000_000, span),
+                                "End".to_string()=>Value::duration(((0*60+4)*1000+000)*1_000_000, span),
+                            }, span),
+                        "Payload".to_string()=>Value::list(vec![
+                            Value::string("Never drink liquid nitrogen.", span),
+                            ], span),
                     }, span),
-                "Payload".to_string()=>Value::list(vec![
-                    Value::string("— It will perforate your stomach.", span),
-                    Value::string("— You could die.", span),
-                    ], span),
-            }, span),
-        }, span),
-        Value::record(record!{
-            "Cue".to_string() => Value::record(record!{
-                "Timings".to_string()=>Value::record(record!{
-                    "Start".to_string()=>Value::duration(((0*60+10)*1000+000)*1_000_000, span),
-                    "End".to_string()=>Value::duration(((0*60+14)*1000+000)*1_000_000, span),
                 }, span),
-            "Payload".to_string()=>Value::list(vec![
-                Value::string("The Organisation for Sample Public Service Announcements accepts no liability for the content of this advertisement, or for the consequences of any actions taken on the basis of the information provided.", span),
-                ], span),
-        }, span),
-    }, span),        ],span)
-            }, span)
-        ),
-    }
-    ];
+                Value::record(record!{
+                    "Cue".to_string() => Value::record(record!{
+                        "Timings".to_string()=>Value::record(record!{
+                            "Start".to_string()=>Value::duration(((0*60+5)*1000+000)*1_000_000, span),
+                            "End".to_string()=>Value::duration(((0*60+9)*1000+000)*1_000_000, span),
+                        }, span),
+
+                        "Payload".to_string()=>Value::list(vec![
+                            Value::string("— It will perforate your stomach.", span),
+                            Value::string("— You could die.", span),
+                            ], span),
+                        }, span),
+                    }, span),
+                Value::record(record!{
+                    "Cue".to_string() => Value::record(record!{
+                        "Timings".to_string()=>Value::record(record!{
+                            "Start".to_string()=>Value::duration(((0*60+10)*1000+000)*1_000_000, span),
+                            "End".to_string()=>Value::duration(((0*60+14)*1000+000)*1_000_000, span),
+                        }, span),
+                        "Payload".to_string()=>Value::list(vec![
+                            Value::string("The Organisation for Sample Public Service Announcements accepts no liability for the content of this advertisement, or for the consequences of any actions taken on the basis of the information provided.", span),
+                            ], span)
+                        }, span),
+                    }, span),
+                ], span)
+            },
+            span,
+        )),
+    }];
     vec
 }
 
