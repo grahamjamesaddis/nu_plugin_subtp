@@ -1,10 +1,10 @@
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
+    record, Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value,
 };
 
-use super::SubtpPlugin;
 use super::common::ToValue;
+use super::SubtpPlugin;
 
 use subtp::vtt::{
     Alignment, Anchor, CueSettings, Line, LineAlignment, Percentage, Position, PositionAlignment,
