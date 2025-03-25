@@ -51,7 +51,8 @@ fn examples(description: &str) -> Vec<Example> {
     let span = Span::test_data();
     let vec = vec![Example {
         description,
-        example: "1 00:01:17,757 --> 00:01:18,757 Copy boy!
+        example: "
+1 00:01:17,757 --> 00:01:18,757 Copy boy!
 
 2 00:01:20,727 --> 00:01:23,662
 Make it snappy.
@@ -80,8 +81,8 @@ Where's the rest of this story?
                 Value::record(
                     record! {
                         "Sequence"=>Value::int(2, span),
-                        "Start"=>Value::duration(((1*60+17)*1000+757)*1000_000, span),
-                        "End"=>Value::duration(((1*60+18)*1000+757)*1_000_000, span),
+                        "Start"=>Value::duration(((1*60+20)*1000+727)*1_000_000, span),
+                        "End"=>Value::duration(((1*60+23)*1000+662)*1_000_000, span),
                         "Text"=>Value::List { vals: vec![
                             Value::String { val:"Copy boy!".to_string(), internal_span: Span { start: 1, end: 2 } }
                             ], internal_span: span }
@@ -91,8 +92,8 @@ Where's the rest of this story?
                 Value::record(
                     record! {
                         "Sequence"=>Value::int(3, span),
-                        "Start"=>Value::duration(((1*60+17)*1000+757)*1000_000, span),
-                        "End"=>Value::duration(((1*60+18)*1000+757)*1_000_000, span),
+                        "Start"=>Value::duration(((1*60+23)*1000+862)*1000_000, span),
+                        "End"=>Value::duration(((1*60+25)*1000+91)*1_000_000, span),
                         "Text"=>Value::List { vals: vec![
                             Value::String { val:"Morning Post.".to_string(), internal_span: Span { start: 1, end: 2 } }
                             ], internal_span: span }
@@ -102,8 +103,8 @@ Where's the rest of this story?
                 Value::record(
                     record! {
                         "Sequence"=>Value::int(4, span),
-                        "Start"=>Value::duration(((1*60+17)*1000+757)*1000_000, span),
-                        "End"=>Value::duration(((1*60+18)*1000+757)*1_000_000, span),
+                        "Start"=>Value::duration(((1*60+25)*1000+298)*1000_000, span),
+                        "End"=>Value::duration(((1*60+27)*1000+960)*1_000_000, span),
                         "Text"=>Value::List { vals: vec![
                             Value::String { val:"City desk? Just a moment and I'll connect you.".to_string(), internal_span: Span { start: 1, end: 2 } }
                             ], internal_span: span }
@@ -113,8 +114,8 @@ Where's the rest of this story?
                 Value::record(
                     record! {
                         "Sequence"=>Value::int(5, span),
-                        "Start"=>Value::duration(((1*60+17)*1000+757)*1000_000, span),
-                        "End"=>Value::duration(((1*60+18)*1000+757)*1_000_000, span),
+                        "Start"=>Value::duration(((1*60+28)*1000+263)*1000_000, span),
+                        "End"=>Value::duration(((1*60+30)*1000+998)*1_000_000, span),
                         "Text"=>Value::List { vals: vec![
                             Value::String { val:"If anybody asks for me, I'm down at the courthouse.".to_string(), internal_span: Span { start: 1, end: 2 } }
                             ], internal_span: span }
@@ -193,7 +194,7 @@ impl ToValue for SrtTimestamp {
             ((self.hours * 60 + self.minutes) * 60 + self.seconds) as u64,
             self.milliseconds as u32 * 1_000_000,
         );
-        let nanoseconds: i64 = (duration.as_secs() * 1_000_000_000) as i64;
+        let nanoseconds: i64 = duration.as_nanos() as i64;
         Value::duration(nanoseconds, span)
     }
 }

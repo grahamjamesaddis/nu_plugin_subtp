@@ -355,7 +355,7 @@ impl ToValue for VttTimestamp {
             ((self.hours * 60 + self.minutes) * 60 + self.seconds) as u64,
             self.milliseconds as u32 * 1_000_000,
         );
-        let nanoseconds: i64 = (duration.as_secs() * 1_000_000_000) as i64;
+        let nanoseconds: i64 = duration.as_nanos() as i64;
         Value::duration(nanoseconds, span)
     }
 }
