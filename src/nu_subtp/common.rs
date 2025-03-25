@@ -14,6 +14,14 @@ impl ToValue for Record {
         Value::record(self.clone(), span)
     }
 }
+impl ToValue for f32 {
+    fn to_value(&self, span: Span) -> Value {
+        Value::Float {
+            val: *self as f64,
+            internal_span: span,
+        }
+    }
+}
 
 #[duplicate_item(types; [String]; [str])]
 impl ToValue for types {

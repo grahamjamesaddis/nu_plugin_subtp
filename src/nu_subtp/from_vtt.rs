@@ -276,7 +276,7 @@ impl ToValue for Line {
 
 impl ToValue for Percentage {
     fn to_value(&self, span: Span) -> Value {
-        Value::float(self.value as f64, span)
+        self.value.to_value(span)
     }
 }
 
@@ -293,20 +293,19 @@ impl ToValue for Position {
 }
 impl ToValue for VttTimings {
     fn to_value(&self, span: Span) -> Value {
-        Value::record(
-            record! {
-                "Start"=>self.start.to_value(span),
-                "End"=>self.end.to_value(span),
-            },
-            span,
-        )
+        record! {
+            "Start"=>self.start.to_value(span),
+            "End"=>self.end.to_value(span),
+        }
+        .to_value(span)
     }
 }
 impl ToValue for VttStyle {
     fn to_value(&self, span: Span) -> Value {
-        let mut rec = record!();
-        rec.push("Style", self.style.to_value(span));
-        Value::record(rec, span)
+        record! {
+            "Style"=>self.style.to_value(span),
+        }
+        .to_value(span)
     }
 }
 

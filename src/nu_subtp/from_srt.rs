@@ -150,13 +150,13 @@ pub fn run_srt(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledErro
 
 impl ToValue for SubRip {
     fn to_value(&self, span: nu_protocol::Span) -> Value {
-        Value::list(
-            self.subtitles
-                .iter()
-                .map(|srt_subtitle| srt_subtitle.to_value(span))
-                .collect(),
-            span,
-        )
+        let a: Vec<Value> = self
+            .subtitles
+            .iter()
+            .map(|srt_subtitle| srt_subtitle.to_value(span))
+            .collect();
+
+        a.to_value(span)
     }
 }
 
