@@ -1,6 +1,9 @@
+use std::time::Duration;
+
 use duplicate::duplicate_item;
 
 use nu_protocol::{Record, Span, Value};
+use subtp::{srt::SrtTimestamp, vtt::VttTimestamp};
 
 pub trait ToValue {
     fn to_value(&self, span: Span) -> Value;
@@ -68,5 +71,16 @@ impl ToValue for Vec<Value> {
             vals: self.to_vec(),
             internal_span: span,
         }
+    }
+}
+#[duplicate_item(types; [SrtTimestamp]; [VttTimestamp])]
+impl ToValue for types {
+    fn to_value(&self, span: Span) -> Value {
+        let duration = Duration::new(
+            ((self.hours * 60 + self.minutes) * 60 + self.seconds) as u64,
+            self.milliseconds as u32 * 1_000_000,
+        );
+        let nanoseconds: i64 = duration.as_nanos() as i64;
+        Value::duration(nanoseconds, span)
     }
 }

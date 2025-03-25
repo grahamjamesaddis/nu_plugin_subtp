@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
@@ -8,7 +6,7 @@ use nu_protocol::{
 use super::SubtpPlugin;
 use super::common::ToValue;
 
-use subtp::srt::{LinePosition, SrtSubtitle, SrtTimestamp, SubRip};
+use subtp::srt::{LinePosition, SrtSubtitle, SubRip};
 pub struct FromSrt;
 
 impl SimplePluginCommand for FromSrt {
@@ -186,15 +184,5 @@ impl ToValue for LinePosition {
             "y2"=>self.y2.to_value(span),
         }
         .to_value(span)
-    }
-}
-impl ToValue for SrtTimestamp {
-    fn to_value(&self, span: Span) -> Value {
-        let duration = Duration::new(
-            ((self.hours * 60 + self.minutes) * 60 + self.seconds) as u64,
-            self.milliseconds as u32 * 1_000_000,
-        );
-        let nanoseconds: i64 = duration.as_nanos() as i64;
-        Value::duration(nanoseconds, span)
     }
 }

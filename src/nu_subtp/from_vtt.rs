@@ -1,5 +1,3 @@
-use std::{i64, time::Duration};
-
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
@@ -10,8 +8,8 @@ use super::common::ToValue;
 
 use subtp::vtt::{
     Alignment, Anchor, CueSettings, Line, LineAlignment, Percentage, Position, PositionAlignment,
-    Vertical, VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimestamp,
-    VttTimings, WebVtt,
+    Vertical, VttBlock, VttComment, VttCue, VttDescription, VttRegion, VttStyle, VttTimings,
+    WebVtt,
 };
 pub struct FromVtt;
 
@@ -346,17 +344,6 @@ impl ToValue for Anchor {
             "y"=>self.y.to_value(span),
         }
         .to_value(span)
-    }
-}
-
-impl ToValue for VttTimestamp {
-    fn to_value(&self, span: Span) -> Value {
-        let duration = Duration::new(
-            ((self.hours * 60 + self.minutes) * 60 + self.seconds) as u64,
-            self.milliseconds as u32 * 1_000_000,
-        );
-        let nanoseconds: i64 = duration.as_nanos() as i64;
-        Value::duration(nanoseconds, span)
     }
 }
 
