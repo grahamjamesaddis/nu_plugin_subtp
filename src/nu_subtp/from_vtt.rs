@@ -64,37 +64,24 @@ Never drink liquid nitrogen.
 00:10.000 --> 00:14.000
 The Organisation for Sample Public Service Announcements accepts no liability for the content of this advertisement, or for the consequences of any actions taken on the basis of the information provided.
 ",
-        result: Some(Value::record(
-            record! {
-                "Blocks".to_string()=>Value::record(
-                record!{
-                    "Cue".to_string() => Value::record(
-                        record!{
-                            "Timings".to_string()=>Value::record(
-                                record!{
-                                    "Start".to_string()=>Value::duration(((0*60+1)*1000+000)*1_000_000, span),
-                                    "End".to_string()=>Value::duration(((0*60+4)*1000+000)*1_000_000, span),
-                                },
-                                span
-                            ),
-                            "Payload".to_string()=>Value::list(
-                                vec![
-                                    Value::string("Never drink liquid nitrogen.", span),
-                                ],
-                                span
-                            )
-                        },
-                        span
-                    )
-                },
-                span
-            ),
-    },
-    span,
-)
-),
-}
-];
+        result: Some(Value::record(record! {
+            "Blocks".to_string()=>Value::list(vec![
+                Value::record(record!{
+                    "Cue".to_string() => Value::record(record!{
+                        "Timings".to_string()=>Value::record(record!{
+                            "Start".to_string()=>Value::duration(((0*60+1)*1000+000)*1_000_000, span),
+                            "End".to_string()=>Value::duration(((0*60+4)*1000+000)*1_000_000, span),
+                        }, span),
+                    "Payload".to_string()=>Value::list(vec![
+                        Value::string("Never drink liquid nitrogen.", span),
+                        ], span),
+                }, span),
+            }, span),
+            ],span)
+            }, span)
+        ),
+    }
+    ];
     vec
 }
 
