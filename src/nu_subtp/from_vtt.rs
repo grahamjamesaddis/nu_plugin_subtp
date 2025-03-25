@@ -51,7 +51,8 @@ fn examples(description: &str) -> Vec<Example> {
     let span = Span::test_data();
     let vec = vec![Example {
         description,
-        example: "WEBVTT
+        example:
+"WEBVTT
 
 00:01.000 --> 00:04.000
 Never drink liquid nitrogen.
@@ -65,39 +66,35 @@ The Organisation for Sample Public Service Announcements accepts no liability fo
 ",
         result: Some(Value::record(
             record! {
-                    "provider".to_string()=>Value::record(
+                "Blocks".to_string()=>Value::record(
+                record!{
+                    "Cue".to_string() => Value::record(
                         record!{
-                            "aws".to_string() => Value::record
-                            (    record!{
-                                "region".to_string()=>Value::test_string("us-east-1")
-                            },span
+                            "Timings".to_string()=>Value::record(
+                                record!{
+                                    "Start".to_string()=>Value::duration(((0*60+1)*1000+000)*1_000_000, span),
+                                    "End".to_string()=>Value::duration(((0*60+4)*1000+000)*1_000_000, span),
+                                },
+                                span
+                            ),
+                            "Payload".to_string()=>Value::list(
+                                vec![
+                                    Value::string("Never drink liquid nitrogen.", span),
+                                ],
+                                span
                             )
-                        }
-                    ,span
-                    ),
-
-                    "resource".to_string()=> Value::record(
-                        record!{"aws_instance".to_string()=>
-                        Value::record (
-                            record!{
-                                "web".to_string()=>
-                                Value::record(
-                                    record! {
-                                        "ami".to_string()=>Value::test_string("ami-a1b2c3d4"),
-                                        "instance_type".to_string()=>Value::test_string("t2.micro"),
-                                    },
-                                    span,
-                                )
-                            },
-                            span
-                        )}
-                        ,
-                         span,
-            )
+                        },
+                        span
+                    )
                 },
-            span,
-        )),
-    }];
+                span
+            ),
+    },
+    span,
+)
+),
+}
+];
     vec
 }
 
