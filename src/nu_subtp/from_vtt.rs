@@ -39,7 +39,7 @@ impl SimplePluginCommand for FromVtt {
         call: &EvaluatedCall,
         input: &Value,
     ) -> Result<Value, LabeledError> {
-        run_vtt(call, input)
+        run(call, input)
     }
 }
 fn signature(name: &str) -> nu_protocol::Signature {
@@ -111,7 +111,7 @@ fn examples(description: &str) -> Vec<Example> {
     vec
 }
 
-pub fn run_vtt(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
+pub fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     let span = call.head;
     let input_string = input.as_str()?;
 

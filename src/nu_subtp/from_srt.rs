@@ -35,7 +35,7 @@ impl SimplePluginCommand for FromSrt {
         call: &EvaluatedCall,
         input: &Value,
     ) -> Result<Value, LabeledError> {
-        run_srt(call, input)
+        run(call, input)
     }
 }
 
@@ -128,7 +128,7 @@ fn examples(description: &str) -> Vec<Example> {
     vec
 }
 
-pub fn run_srt(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
+fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     let span = call.head;
     let input_string = input.as_str()?;
 
