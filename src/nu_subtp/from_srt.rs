@@ -1,10 +1,10 @@
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    record, Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value,
+    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 
-use super::common::ToValue;
 use super::SubtpPlugin;
+use super::common::ToValue;
 
 use subtp::srt::{LinePosition, SrtSubtitle, SubRip};
 pub struct FromSrt;
@@ -45,11 +45,7 @@ fn signature(name: &str) -> nu_protocol::Signature {
         .category(Category::Formats)
 }
 
-fn examples(description: &str) -> Vec<Example> {
-    let span = Span::test_data();
-    let vec = vec![Example {
-        description,
-        example: "1 00:01:17,757 --> 00:01:18,757 Copy boy!
+const EX_TXT: &str = "1 00:01:17,757 --> 00:01:18,757 Copy boy!
 
 2 00:01:20,727 --> 00:01:23,662
 Make it snappy.
@@ -60,7 +56,13 @@ Where's the rest of this story?
 4 00:01:25,298 --> 00:01:27,960 City desk? Just a moment and I'll connect you.
 
 5 00:01:28,268 --> 00:01:30,998 If anybody asks for me, I'm down at the courthouse.
-",
+";
+
+fn examples(description: &str) -> Vec<Example> {
+    let span = Span::test_data();
+    let vec = vec![Example {
+        description,
+        example: EX_TXT,
         result: Some(Value::list(
             vec![
                 Value::record(
