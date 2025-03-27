@@ -1,3 +1,4 @@
+use hcl::edit::parser::Error;
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
     Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Value, record,
@@ -157,34 +158,19 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
         Value::List {
             vals,
             internal_span,
-        } => render_result = vals.to_sub_rip().render(),
-
-        Value::Bool { val, internal_span } => todo!(),
-        Value::Int { val, internal_span } => todo!(),
-        Value::Float { val, internal_span } => todo!(),
-        Value::String { val, internal_span } => todo!(),
-        Value::Glob {
-            val,
-            no_expand,
-            internal_span,
-        } => todo!(),
-        Value::Filesize { val, internal_span } => todo!(),
-        Value::Duration { val, internal_span } => todo!(),
-        Value::Date { val, internal_span } => todo!(),
-        Value::Range { val, internal_span } => todo!(),
-        Value::Record { val, internal_span } => todo!(),
-        Value::Closure { val, internal_span } => todo!(),
-        Value::Error {
-            error,
-            internal_span,
-        } => todo!(),
-        Value::Binary { val, internal_span } => todo!(),
-        Value::CellPath { val, internal_span } => todo!(),
-        Value::Custom { val, internal_span } => todo!(),
-        Value::Nothing { internal_span } => todo!(),
+        } => Ok(vals.to_sub_rip().render().to_value(span)),
+        _ => Err(LabeledError {
+            labels: Box::new(vec![ErrorLabel {
+                text: "Input inconsistent with srt format".into(),
+                span,
+            }]),
+            msg: "Error constructing srt".to_string(),
+            code: None,
+            url: None,
+            help: None,
+            inner: Box::new(Vec::default()),
+        }),
     }
-
-    Ok(render_result.to_value(span))
 }
 
 impl ToSubRip for Vec<Value> {
