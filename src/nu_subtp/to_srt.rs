@@ -45,10 +45,7 @@ impl SimplePluginCommand for ToSrt {
 
 fn signature(name: &str) -> nu_protocol::Signature {
     Signature::build(name)
-        .input_output_type(
-            Type::List(Box::new(Type::Record(Box::new([])))),
-            Type::String,
-        )
+        .input_output_type(Type::Table(Box::new([])), Type::String)
         .category(Category::Formats)
 }
 
