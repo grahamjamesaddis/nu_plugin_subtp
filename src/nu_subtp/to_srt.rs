@@ -1,13 +1,12 @@
-use hcl::edit::parser::Error;
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Value, record,
+    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 
 use super::SubtpPlugin;
 use super::common::ToValue;
 
-use subtp::srt::{LinePosition, SrtSubtitle, SrtTimestamp, SubRip};
+use subtp::srt::{SrtSubtitle, SrtTimestamp, SubRip};
 pub struct ToSrt;
 
 trait ToSubRip {
@@ -151,8 +150,6 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     //     })?;
 
     // Ok(NuValue::from_web_vtt(&parse_result, span))
-
-    let render_result: String;
 
     match input {
         Value::List {
