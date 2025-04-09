@@ -1,17 +1,23 @@
-use hcl::edit::parser::Error;
+use std::{collections::HashMap, time::Duration};
+
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Value, record,
+    Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Type::List, Value,
+    record,
 };
 
 use super::SubtpPlugin;
 use super::common::ToValue;
 
-use subtp::srt::{LinePosition, SrtSubtitle, SrtTimestamp, SubRip};
+use subtp::srt::{SrtSubtitle, SrtTimestamp, SubRip};
 pub struct ToSrt;
 
 trait ToSubRip {
-    fn to_sub_rip(&self) -> SubRip;
+    fn to_sub_rip(&self, span: Span) -> Result<SubRip, LabeledError>;
+}
+
+trait ToSrtSubtitle {
+    fn to_sub_rip(&self, span: Span) -> Result<SrtSubtitle, LabeledError>;
 }
 
 impl SimplePluginCommand for ToSrt {
@@ -26,12 +32,12 @@ impl SimplePluginCommand for ToSrt {
     }
 
     fn description(&self) -> &str {
-        "Parse text as .srt and create records"
+        "Create .srt file from nushell records"
     }
 
-    fn examples(&self) -> Vec<Example> {
-        examples("Convert .srt data into records")
-    }
+    // fn examples(&self) -> Vec<Example> {
+    //     examples("Convert .srt data into records")
+    // }
 
     fn run(
         &self,
@@ -50,7 +56,8 @@ fn signature(name: &str) -> nu_protocol::Signature {
         .category(Category::Formats)
 }
 
-const EX_TXT: &str = "1 00:01:17,757 --> 00:01:18,757 Copy boy!
+const EX_TXT: &str = "
+1 00:01:17,757 --> 00:01:18,757 Copy boy!
 
 2 00:01:20,727 --> 00:01:23,662
 Make it snappy.
@@ -135,30 +142,15 @@ fn examples(description: &str) -> Vec<Example> {
 
 fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     let span = call.head;
-    // let input_string = input.as_str()?;
-
-    // let parse_result: SubRip =
-    //     subtp::srt::SubRip::parse(input_string).map_err(|e| LabeledError {
-    //         labels: Box::new(vec![ErrorLabel {
-    //             text: "Error parsing srt".into(),
-    //             span,
-    //         }]),
-    //         msg: e.to_string(),
-    //         code: None,
-    //         url: None,
-    //         help: None,
-    //         inner: Box::new(Vec::default()),
-    //     })?;
-
-    // Ok(NuValue::from_web_vtt(&parse_result, span))
-
-    let render_result: String;
 
     match input {
         Value::List {
             vals,
             internal_span,
-        } => Ok(vals.to_sub_rip().render().to_value(span)),
+        } => Ok(vals
+            .to_sub_rip(*internal_span)?
+            .render()
+            .to_value(*internal_span)),
         _ => Err(LabeledError {
             labels: Box::new(vec![ErrorLabel {
                 text: "Input inconsistent with srt format".into(),
@@ -173,26 +165,140 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     }
 }
 
+fn timestamp_from_duration(val: i64) -> SrtTimestamp {
+    let hours = (val / (60 * 60 * 1_000_000_000)) as u8;
+    let rest = (val % (60 * 60 * 1_000_000_000));
+    let minutes = (rest / (60 * 1_000_000_000)) as u8;
+    let rest = (rest % (60 * 1_000_000_000));
+    let seconds = (rest / (1_000_000_000)) as u8;
+    let rest = (rest % (1_000_000_000));
+    let milliseconds = (rest / (1_000_000)) as u16;
+    SrtTimestamp {
+        hours: hours,
+        minutes: minutes,
+        seconds: seconds,
+        milliseconds: milliseconds,
+    }
+}
+fn srt_construction_error(msg: &str, span: Span) -> LabeledError {
+    LabeledError {
+        labels: Box::new(vec![ErrorLabel {
+            text: msg.into(),
+            span,
+        }]),
+        msg: "Error constructing srt".to_string(),
+        code: None,
+        url: None,
+        help: None,
+        inner: Box::new(Vec::default()),
+    }
+}
+
+fn start_time_from_record(rec: &Record) -> Option<SrtTimestamp> {
+    rec.iter()
+        .find(|(s, _)| *s == "Start")
+        .map(|(_, v)| match v {
+            Value::Duration {
+                val,
+                internal_span: _,
+            } => Some(timestamp_from_duration(*val)),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+fn end_time_from_record(rec: &Record) -> Option<SrtTimestamp> {
+    rec.iter()
+        .find(|(s, _)| *s == "End")
+        .map(|(_, v)| match v {
+            Value::Duration {
+                val,
+                internal_span: _,
+            } => Some(timestamp_from_duration(*val)),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+fn text_from_list(list: &Vec<Value>) -> Option<Vec<String>> {
+    list.iter()
+        .map(|val| match val {
+            Value::String { val, internal_span } => Some(val.to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn text_from_record(rec: &Record) -> Option<Vec<String>> {
+    rec.iter()
+        .find(|(s, _)| *s == "Text")
+        .map(|(_, v)| match v {
+            Value::List {
+                vals,
+                internal_span: _,
+            } => text_from_list(vals),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+fn sequence_from_record(rec: &Record) -> Option<u32> {
+    rec.iter()
+        .find(|(s, _)| *s == "Sequence")
+        .map(|(_, v)| match v {
+            Value::Int {
+                val,
+                internal_span: _,
+            } => Some(*val as u32),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+impl ToSrtSubtitle for Record {
+    fn to_sub_rip(&self, span: Span) -> Result<SrtSubtitle, nu_protocol::LabeledError> {
+        let Some(sequence) = sequence_from_record(self) else {
+            return Err(srt_construction_error(
+                "Sequence number not in record",
+                span,
+            ));
+        };
+        let Some(start_time) = start_time_from_record(self) else {
+            return Err(srt_construction_error("Start time not in record", span));
+        };
+        let Some(end_time) = end_time_from_record(self) else {
+            return Err(srt_construction_error("End time not in record", span));
+        };
+        let Some(text) = text_from_record(self) else {
+            return Err(srt_construction_error("Text not in record", span));
+        };
+        Ok(SrtSubtitle {
+            sequence: sequence,
+            start: start_time,
+            end: end_time,
+            text: text,
+            line_position: None,
+        })
+    }
+}
+
 impl ToSubRip for Vec<Value> {
-    fn to_sub_rip(&self) -> SubRip {
-        SubRip {
-            subtitles: vec![SrtSubtitle {
-                sequence: 1,
-                start: SrtTimestamp {
-                    hours: 0,
-                    minutes: 0,
-                    seconds: 1,
-                    milliseconds: 0,
-                },
-                end: SrtTimestamp {
-                    hours: 0,
-                    minutes: 0,
-                    seconds: 2,
-                    milliseconds: 0,
-                },
-                text: vec!["Hello, world!".to_string()],
-                line_position: None,
-            }],
-        }
+    fn to_sub_rip(&self, span: Span) -> Result<SubRip, nu_protocol::LabeledError> {
+        let a = self.iter().to_owned().map(|val| match val {
+            Value::Record { val, internal_span } => val.to_sub_rip(*internal_span),
+            _ => Err(LabeledError {
+                labels: Box::new(vec![ErrorLabel {
+                    text: "Input inconsistent with srt format".into(),
+                    span,
+                }]),
+                msg: "Error constructing srt".to_string(),
+                code: None,
+                url: None,
+                help: None,
+                inner: Box::new(Vec::default()),
+            }),
+        });
+        Ok(SubRip {
+            subtitles: a.collect::<Result<Vec<SrtSubtitle>, LabeledError>>()?,
+        })
     }
 }

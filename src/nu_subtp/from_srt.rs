@@ -45,7 +45,8 @@ fn signature(name: &str) -> nu_protocol::Signature {
         .category(Category::Formats)
 }
 
-const EX_TXT: &str = "1 00:01:17,757 --> 00:01:18,757 Copy boy!
+const EX_TXT: &str = "
+1 00:01:17,757 --> 00:01:18,757 Copy boy!
 
 2 00:01:20,727 --> 00:01:23,662
 Make it snappy.
