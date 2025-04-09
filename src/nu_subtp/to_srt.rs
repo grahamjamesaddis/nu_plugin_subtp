@@ -1,9 +1,6 @@
-use std::{collections::HashMap, time::Duration};
-
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Type::List, Value,
-    record,
+    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
 };
 
 use super::SubtpPlugin;
@@ -142,6 +139,22 @@ fn examples(description: &str) -> Vec<Example> {
 
 fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
     let span = call.head;
+    // let input_string = input.as_str()?;
+
+    // let parse_result: SubRip =
+    //     subtp::srt::SubRip::parse(input_string).map_err(|e| LabeledError {
+    //         labels: Box::new(vec![ErrorLabel {
+    //             text: "Error parsing srt".into(),
+    //             span,
+    //         }]),
+    //         msg: e.to_string(),
+    //         code: None,
+    //         url: None,
+    //         help: None,
+    //         inner: Box::new(Vec::default()),
+    //     })?;
+
+    // Ok(NuValue::from_web_vtt(&parse_result, span))
 
     match input {
         Value::List {
