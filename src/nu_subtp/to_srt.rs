@@ -1,6 +1,6 @@
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
 use nu_protocol::{
-    Category, ErrorLabel, Example, LabeledError, Signature, Span, Type, Value, record,
+    Category, ErrorLabel, Example, LabeledError, Record, Signature, Span, Type, Value, record,
 };
 
 use super::SubtpPlugin;
