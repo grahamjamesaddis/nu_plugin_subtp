@@ -219,7 +219,10 @@ fn end_time_from_record(rec: &Record) -> Option<SrtTimestamp> {
 fn text_from_list(list: &Vec<Value>) -> Option<Vec<String>> {
     list.iter()
         .map(|val| match val {
-            Value::String { val, internal_span } => Some(val.to_string()),
+            Value::String {
+                val,
+                internal_span: _,
+            } => Some(val.to_string()),
             _ => None,
         })
         .collect()
