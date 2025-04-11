@@ -23,7 +23,7 @@ impl SimplePluginCommand for ToSrt {
     }
 
     fn description(&self) -> &str {
-        "Create .srt file from nushell records"
+        "Create .srt file from nushell table"
     }
 
     fn run(
