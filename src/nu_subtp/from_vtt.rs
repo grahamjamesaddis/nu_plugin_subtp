@@ -186,8 +186,8 @@ impl ToValue for VttComment {
         record! {
             "Comment"=>
             match self {
-                VttComment::Side(side) => side.to_value(span),
-                VttComment::Below(below) => below.to_value(span),
+                VttComment::Side(side) => record!{"Side" =>  side.to_value(span)}.to_value(span),
+                VttComment::Below(below) => record!{"Below" =>  below.to_value(span)}.to_value(span),
             }
         }
         .to_value(span)
