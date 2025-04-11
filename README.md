@@ -1,10 +1,10 @@
-# nu_plugin_hcl
+# nu_plugin_subtp
 
 [nushell]: https://www.nushell.sh/
 [plugin]: https://www.nushell.sh/contributor-book/plugins.html
 [structured types]: https://www.nushell.sh/book/types_of_data.html
 
-This is a [nushell] [plugin] to parse Hashicorp Configuration Language files into `nu` structured types.
+This is a [nushell] [plugin] to parse SubRip and WebVTT files into `nu` structured types.
 
 # Installing
 
@@ -16,7 +16,7 @@ To [add the plugin] permanently, just install it and call [`register`] on it:
 ## Using Cargo
 
 ```bash
-cargo install nu_plugin_hcl
+cargo install nu_plugin_subtp
 register ~/.cargo/bin/nu_plugin_hcl
 ```
 
