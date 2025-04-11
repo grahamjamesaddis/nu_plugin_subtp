@@ -148,17 +148,10 @@ fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
             .to_sub_rip(*internal_span)?
             .render()
             .to_value(*internal_span)),
-        _ => Err(LabeledError {
-            labels: Box::new(vec![ErrorLabel {
-                text: "Input inconsistent with srt format".into(),
-                span,
-            }]),
-            msg: "Error constructing srt".to_string(),
-            code: None,
-            url: None,
-            help: None,
-            inner: Box::new(Vec::default()),
-        }),
+        _ => Err(srt_construction_error(
+            "Input inconsistent with srt format",
+            span,
+        )),
     }
 }
 
@@ -171,10 +164,10 @@ fn timestamp_from_duration(val: i64) -> SrtTimestamp {
     let rest = rest % (1_000_000_000);
     let milliseconds = (rest / (1_000_000)) as u16;
     SrtTimestamp {
-        hours: hours,
-        minutes: minutes,
-        seconds: seconds,
-        milliseconds: milliseconds,
+        hours,
+        minutes,
+        seconds,
+        milliseconds,
     }
 }
 fn srt_construction_error(msg: &str, span: Span) -> LabeledError {
@@ -290,17 +283,10 @@ impl ToSubRip for Vec<Value> {
     fn to_sub_rip(&self, span: Span) -> Result<SubRip, nu_protocol::LabeledError> {
         let a = self.iter().to_owned().map(|val| match val {
             Value::Record { val, internal_span } => val.get_subtitle(*internal_span),
-            _ => Err(LabeledError {
-                labels: Box::new(vec![ErrorLabel {
-                    text: "Input inconsistent with srt format".into(),
-                    span,
-                }]),
-                msg: "Error constructing srt".to_string(),
-                code: None,
-                url: None,
-                help: None,
-                inner: Box::new(Vec::default()),
-            }),
+            _ => Err(srt_construction_error(
+                "Input inconsistent with srt format",
+                span,
+            )),
         });
         Ok(SubRip {
             subtitles: a.collect::<Result<Vec<SrtSubtitle>, LabeledError>>()?,
