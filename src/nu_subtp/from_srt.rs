@@ -21,11 +21,11 @@ impl SimplePluginCommand for FromSrt {
     }
 
     fn description(&self) -> &str {
-        "Parse text as .srt and create records"
+        "Parse text as .srt and create table"
     }
 
     fn examples(&self) -> Vec<Example> {
-        examples("Convert .srt data into records")
+        examples("Convert .srt data into table")
     }
 
     fn run(
