@@ -128,7 +128,6 @@ pub fn run(call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
             inner: Box::new(Vec::default()),
         })?;
 
-    // Ok(NuValue::from_web_vtt(&parse_result, span))
     Ok(parse_result.to_value(span))
 }
 
