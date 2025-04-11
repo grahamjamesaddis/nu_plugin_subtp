@@ -192,6 +192,7 @@ fn srt_construction_error(msg: &str, span: Span) -> LabeledError {
 }
 
 trait FromRecord {
+    fn get_subtitle(&self, span: Span) -> Result<SrtSubtitle, LabeledError>;
     fn get_sequence(&self) -> Option<u32>;
     fn get_start(&self) -> Option<SrtTimestamp>;
     fn get_end(&self) -> Option<SrtTimestamp>;
@@ -199,6 +200,30 @@ trait FromRecord {
 }
 
 impl FromRecord for Record {
+    fn get_subtitle(&self, span: Span) -> Result<SrtSubtitle, LabeledError> {
+        let Some(sequence) = self.get_sequence() else {
+            return Err(srt_construction_error(
+                "Sequence number not in record",
+                span,
+            ));
+        };
+        let Some(start_time) = self.get_start() else {
+            return Err(srt_construction_error("Start time not in record", span));
+        };
+        let Some(end_time) = self.get_end() else {
+            return Err(srt_construction_error("End time not in record", span));
+        };
+        let Some(text) = self.get_text() else {
+            return Err(srt_construction_error("Text not in record", span));
+        };
+        Ok(SrtSubtitle {
+            sequence: sequence,
+            start: start_time,
+            end: end_time,
+            text: text,
+            line_position: None,
+        })
+    }
     fn get_start(&self) -> Option<SrtTimestamp> {
         self.iter()
             .find(|(s, _)| *s == "Start")
@@ -261,37 +286,10 @@ fn text_from_list(list: &Vec<Value>) -> Option<Vec<String>> {
         .collect()
 }
 
-impl ToSrtSubtitle for Record {
-    fn to_sub_rip(&self, span: Span) -> Result<SrtSubtitle, nu_protocol::LabeledError> {
-        let Some(sequence) = self.get_sequence() else {
-            return Err(srt_construction_error(
-                "Sequence number not in record",
-                span,
-            ));
-        };
-        let Some(start_time) = self.get_start() else {
-            return Err(srt_construction_error("Start time not in record", span));
-        };
-        let Some(end_time) = self.get_end() else {
-            return Err(srt_construction_error("End time not in record", span));
-        };
-        let Some(text) = self.get_text() else {
-            return Err(srt_construction_error("Text not in record", span));
-        };
-        Ok(SrtSubtitle {
-            sequence: sequence,
-            start: start_time,
-            end: end_time,
-            text: text,
-            line_position: None,
-        })
-    }
-}
-
 impl ToSubRip for Vec<Value> {
     fn to_sub_rip(&self, span: Span) -> Result<SubRip, nu_protocol::LabeledError> {
         let a = self.iter().to_owned().map(|val| match val {
-            Value::Record { val, internal_span } => val.to_sub_rip(*internal_span),
+            Value::Record { val, internal_span } => val.get_subtitle(*internal_span),
             _ => Err(LabeledError {
                 labels: Box::new(vec![ErrorLabel {
                     text: "Input inconsistent with srt format".into(),
